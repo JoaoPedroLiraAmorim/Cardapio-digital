@@ -30,7 +30,7 @@ Esta branch contém `server/mercado-pago.js`; Worker/D1/catálogo ficam na branc
 1. Consolidar as branches no fluxo de entrega escolhido. A revisão conjunta já executou `npm test` e `npm run test:integration`; este último cobre cliente → Worker → módulo Mercado Pago real com rede simulada e SQLite: preço autoritativo, assinatura/aprovação, respostas perdidas com idempotência e recebedor divergente. Instruções de resolução do `package.json` estão em `MERCADO_PAGO.md`.
 2. Configurar conta habilitada, secrets, collector ID, D1, catálogo e origens CORS conforme documentação do servidor; fazer homologação real antes de ativar. Não inserir credenciais no repositório nem nos assets públicos.
 3. Publicar Worker e frontend somente depois de homologar; configuração pública do frontend permanece opt-in. Não houve publicação nesta retomada.
-4. Envio dos commits ao GitHub depende de acesso técnico de escrita; o push de verificação da sessão retornou 403. Alterações locais na nuvem não equivalem a alterações publicadas no GitHub.
+4. As alterações foram publicadas na branch remota `codex/integracao-mercado-pago` em 30/09/2026, após renovação das permissões da integração GitHub. A árvore publicada foi comparada com o checkout local; a `main` permaneceu inalterada.
 
 ## Limitações que permanecem
 
