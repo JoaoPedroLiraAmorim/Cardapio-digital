@@ -144,6 +144,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const items = document.querySelector("#cart-items");
   const dock = document.querySelector(".cart-dock");
   const status = document.querySelector("#cart-status");
+  const pix = window.JGPix.createClient(order.config.pix);
+  const pixPanel = document.querySelector("#pix-panel");
+  const pixState = document.querySelector("#pix-state");
+  const pixRefresh = document.querySelector("#pix-refresh");
+  let pixTimer;
+  let pixAttempts = 0;
+  let pixBusy = false;
   let toastTimeout;
   let cart = [];
 
@@ -157,6 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
     button.textContent = "+ Adicionar";
     button.setAttribute("aria-label", `Adicionar ${products[id].name} ao carrinho`);
     button.addEventListener("click", () => {
+      if (pix.getSession()) return announce("Conclua o pedido Pix em andamento antes de alterar o carrinho.");
       const existing = cart.find(item => item.id === id);
       if (existing?.quantity === 99) return announce("Limite de 99 unidades por produto.");
       if (existing) existing.quantity++;
@@ -222,6 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
       remove.setAttribute("aria-label", `Remover ${products[item.id].name}`);
       plus.disabled = item.quantity >= 99;
       const change = delta => {
+        if (pix.getSession()) return announce("Conclua o pedido Pix em andamento antes de alterar o carrinho.");
         item.quantity += delta;
         if (item.quantity <= 0) cart = cart.filter(entry => entry !== item);
         save(); render();
@@ -242,13 +251,14 @@ document.addEventListener("DOMContentLoaded", () => {
         notes.maxLength = 240;
         notes.placeholder = "Ex.: um sem cebola, outro sem picles";
         notes.value = item.notes;
-        notes.addEventListener("input", () => { item.notes = notes.value; save(); });
+        notes.addEventListener("input", () => { if (pix.getSession()) return; item.notes = notes.value; save(); });
         label.append(notes);
         row.append(label);
       }
       items.append(row);
     });
     updateTotals();
+    syncPixLock();
   }
   function updateFields() {
     const delivery = form.elements.fulfillment.value === "delivery";
@@ -263,11 +273,114 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector("#change-field").hidden = !change;
     form.elements.changeFor.disabled = !change;
     form.elements.changeFor.required = change;
+    const onlinePix = pix.enabled && form.elements.payment.value === "pix";
+    document.querySelector("#pix-email-field").hidden = !onlinePix;
+    form.elements.payerEmail.disabled = !onlinePix;
+    form.elements.payerEmail.required = onlinePix;
+    document.querySelector("#checkout-submit").textContent = onlinePix ? "Gerar Pix para pagar" : "Continuar no WhatsApp ↗";
+    document.querySelector("#payment-hint").textContent = onlinePix ? "Você paga pelo aplicativo do seu banco. Confirmamos o Pix antes de enviar o pedido no WhatsApp." : "Você não paga aqui. O pedido e o pagamento serão confirmados pela hamburgueria no WhatsApp.";
     updateTotals();
   }
-  document.querySelector("#open-cart").addEventListener("click", () => { dialog.showModal(); document.body.classList.add("cart-open"); });
+  function syncPixLock() {
+    const locked = !!pix.getSession();
+    document.querySelectorAll(".add-button, #cart-items button, #cart-items input").forEach(control => {
+      control.disabled = locked || (control.textContent === "+" && Number(control.previousElementSibling?.textContent) >= 99);
+    });
+    form.hidden = locked || !cart.length;
+    pixPanel.hidden = !locked;
+  }
+  function stopPixPolling() { clearTimeout(pixTimer); pixTimer = null; }
+  function showPix() {
+    syncPixLock();
+    const session = pix.getSession();
+    if (!session) return;
+    const payment = session.order;
+    const state = payment?.status || "creating";
+    const labels = { creating: "Estamos gerando seu Pix…", pending: "Aguardando pagamento. A confirmação é automática.", approved: "Pagamento confirmado! Envie agora seu pedido para a hamburgueria.", rejected: "Pagamento recusado. Você pode voltar ao pedido.", cancelled: "Pagamento cancelado. Você pode voltar ao pedido.", expired: "O Pix expirou. Volte ao pedido para tentar novamente.", refunded: "Este pagamento foi devolvido. Fale com a hamburgueria antes de pedir novamente.", charged_back: "Este pagamento foi contestado. Fale com a hamburgueria." };
+    pixState.textContent = labels[state];
+    document.querySelector("#pix-total").textContent = payment ? order.money(payment.amountCents) : "Conferindo…";
+    const summary = document.querySelector("#pix-summary");
+    summary.replaceChildren();
+    payment?.items.forEach(item => { const row = document.createElement("li"); row.textContent = `${item.quantity} × ${item.name} — ${order.money(item.quantity * item.priceCents)}`; summary.append(row); });
+    document.querySelector("#pix-code-panel").hidden = state !== "pending";
+    const qr = document.querySelector("#pix-qr");
+    if (state === "pending") {
+      qr.src = `data:image/png;base64,${payment.qrCodeBase64}`;
+      document.querySelector("#pix-code").value = payment.qrCode;
+      document.querySelector("#pix-expiration").textContent = payment.expiresAt ? `Pague até ${new Date(payment.expiresAt).toLocaleString("pt-BR")}.` : "";
+    } else { qr.removeAttribute("src"); document.querySelector("#pix-code").value = ""; }
+    document.querySelector("#pix-whatsapp").hidden = state !== "approved";
+    document.querySelector("#pix-whatsapp").disabled = pixBusy;
+    document.querySelector("#pix-edit").hidden = !pix.isTerminal(state) || state === "approved";
+    if (state !== "approved") document.querySelector("#pix-new-order").hidden = true;
+    pixRefresh.hidden = pix.isTerminal(state);
+    pixRefresh.disabled = pixBusy;
+    pixRefresh.textContent = payment ? "Atualizar pagamento" : "Tentar gerar Pix novamente";
+    if (pix.isTerminal(state)) stopPixPolling();
+  }
+  function schedulePixPolling() {
+    stopPixPolling();
+    const state = pix.getSession()?.order?.status;
+    if (!dialog.open || !["pending", "creating"].includes(state)) return;
+    if (pixAttempts >= 60) { pixState.textContent = "Ainda aguardando. Toque em atualizar pagamento quando concluir no banco."; return; }
+    const delay = pixAttempts < 6 ? 10000 : pixAttempts < 20 ? 15000 : 30000;
+    pixTimer = setTimeout(() => { pixAttempts++; runPix(true); }, delay);
+  }
+  async function runPix(poll = false, details = null) {
+    if (pixBusy) return;
+    pixBusy = true;
+    stopPixPolling();
+    try {
+      const promise = details ? pix.start(cart, details) : pix.refresh();
+      showPix();
+      if (details) document.querySelector("#pix-title").focus();
+      await promise;
+      showPix();
+      schedulePixPolling();
+    } catch (error) {
+      if (dialog.open) {
+        if (!pix.getSession()) { announce(error.message); return; }
+        showPix();
+        pixState.textContent = "Não conseguimos confirmar agora. Atualize o pagamento; sua tentativa será retomada sem gerar outro pedido.";
+        if (poll) schedulePixPolling();
+      }
+    } finally { pixBusy = false; pixRefresh.disabled = false; document.querySelector("#pix-whatsapp").disabled = false; }
+  }
+  pixRefresh.addEventListener("click", () => { pixAttempts = 0; runPix(); });
+  document.querySelector("#pix-edit").addEventListener("click", () => { stopPixPolling(); pix.reset(); syncPixLock(); updateFields(); document.querySelector("#checkout-submit").focus(); });
+  document.querySelector("#pix-new-order").addEventListener("click", () => {
+    if (pix.getSession()?.order?.status !== "approved") return;
+    pix.finish();
+    if (pix.getSession()) return;
+    cart = []; save(); render(); dialog.close();
+    document.querySelector("#pix-new-order").hidden = true;
+  });
+  document.querySelector("#pix-copy").addEventListener("click", async () => {
+    const code = document.querySelector("#pix-code");
+    if (pix.getSession()?.order?.status !== "pending") return;
+    try { await navigator.clipboard.writeText(code.value); announce("Código Pix copiado. Cole no aplicativo do seu banco."); }
+    catch { code.focus(); code.select(); announce("Selecione o código e use a opção Copiar do seu aparelho."); }
+  });
+  function openWhatsapp(message) {
+    const link = document.createElement("a");
+    link.href = `https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(message)}`;
+    link.target = "_blank"; link.rel = "noopener noreferrer";
+    document.body.append(link); link.click(); link.remove();
+    announce("Envie a mensagem no WhatsApp para solicitar seu pedido.");
+  }
+  document.querySelector("#pix-whatsapp").addEventListener("click", () => {
+    const session = pix.getSession();
+    if (pixBusy || session?.order?.status !== "approved") return;
+    const payment = session.order;
+    const paidProducts = Object.fromEntries(payment.items.map(item => [item.id, { name: item.name, price: item.priceCents, allowsNotes: products[item.id]?.allowsNotes }]));
+    const paidCart = payment.items.map(item => ({ id: item.id, quantity: item.quantity, notes: item.notes }));
+    const message = order.message(paidCart, paidProducts, { ...session.details, payment: "pix", confirmedPayment: { id: payment.id, subtotal: payment.subtotalCents, delivery: payment.deliveryCents, total: payment.amountCents } });
+    openWhatsapp(message);
+    document.querySelector("#pix-new-order").hidden = false;
+  });
+  document.querySelector("#open-cart").addEventListener("click", () => { dialog.showModal(); document.body.classList.add("cart-open"); if (pix.getSession()) { showPix(); pixAttempts = 0; runPix(); } });
   document.querySelector("#close-cart").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => document.body.classList.remove("cart-open"));
+  dialog.addEventListener("close", () => { document.body.classList.remove("cart-open"); stopPixPolling(); pix.pause(); });
   form.addEventListener("change", updateFields);
   form.elements.changeFor.addEventListener("input", () => form.elements.changeFor.setCustomValidity(""));
   form.addEventListener("submit", event => {
@@ -284,15 +397,12 @@ document.addEventListener("DOMContentLoaded", () => {
       form.elements.changeFor.setCustomValidity("Informe um valor igual ou maior que o total do pedido.");
     }
     if (!form.reportValidity()) return;
-    const url = `https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(order.message(cart, products, details))}`;
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    announce("Envie a mensagem no WhatsApp para solicitar seu pedido.");
+    if (pix.getSession()) return;
+    if (pix.enabled && details.payment === "pix") {
+      if (order.totals(cart, products, details.fulfillment).total > 150000) return announce("O Pix aceita pedidos de até R$ 1.500,00. Ajuste o carrinho.");
+      pixAttempts = 0; runPix(false, details); return;
+    }
+    openWhatsapp(order.message(cart, products, details));
   });
   form.addEventListener("input", event => {
     if (["customer", "address", "neighborhood"].includes(event.target.name)) event.target.setCustomValidity("");
