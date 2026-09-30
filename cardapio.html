@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="cardapio.css">
 
   <!-- Scripts -->
+  <script src="pedido.js" defer></script>
   <script src="cardapio.js" defer></script>
 </head>
 <body>
@@ -42,7 +43,7 @@
       </div>
       <div class="intro-text-box">
         <h1 class="intro-headline">JG Hamburgueria</h1>
-        <p class="intro-subtext">Sabor em cada mordida! Confira nosso cardápio completo abaixo.</p>
+        <p class="intro-subtext">Sabor em cada mordida! Escolha seus favoritos e faça seu pedido pelo WhatsApp.</p>
       </div>
     </div>
   </section>
@@ -65,7 +66,7 @@
         <div class="menu-items-list">
           
           <!-- Item 1 -->
-          <article class="menu-item">
+          <article data-product-id="item-1" data-price="2699" class="menu-item">
             <div class="item-header">
               <h3 class="item-name">Burg da casa</h3>
               <div class="item-dots" aria-hidden="true"></div>
@@ -75,7 +76,7 @@
           </article>
 
           <!-- Item 2 -->
-          <article class="menu-item">
+          <article data-product-id="item-2" data-price="2599" class="menu-item">
             <div class="item-header">
               <h3 class="item-name">JG</h3>
               <div class="item-dots" aria-hidden="true"></div>
@@ -85,7 +86,7 @@
           </article>
 
           <!-- Item 3 -->
-          <article class="menu-item">
+          <article data-product-id="item-3" data-price="1999" class="menu-item">
             <div class="item-header">
               <h3 class="item-name">PCQ Adulto</h3>
               <div class="item-dots" aria-hidden="true"></div>
@@ -95,7 +96,7 @@
           </article>
 
           <!-- Item 4 -->
-          <article class="menu-item">
+          <article data-product-id="item-4" data-price="2400" class="menu-item">
             <div class="item-header">
               <h3 class="item-name">Burb tradicional</h3>
               <div class="item-dots" aria-hidden="true"></div>
@@ -105,7 +106,7 @@
           </article>
 
           <!-- Item 5 -->
-          <article class="menu-item">
+          <article data-product-id="item-5" data-price="2999" class="menu-item">
             <div class="item-header">
               <h3 class="item-name">Pulled pork</h3>
               <div class="item-dots" aria-hidden="true"></div>
@@ -129,7 +130,7 @@
         <div class="menu-items-list">
           
           <!-- Combo 1: PCQ Kids -->
-          <article class="menu-item combo-item">
+          <article data-product-id="item-6" data-price="2000" class="menu-item combo-item">
             <div class="item-header">
               <h3 class="item-name">PCQ Kids</h3>
               <div class="item-dots" aria-hidden="true"></div>
@@ -155,7 +156,7 @@
 
         <div class="menu-items-list">
           
-          <article class="menu-item">
+          <article data-product-id="item-7" data-price="999" class="menu-item">
             <div class="item-header">
               <h3 class="item-name">Batata Frita (200 g)</h3>
               <div class="item-dots" aria-hidden="true"></div>
@@ -178,7 +179,7 @@
 
         <div class="menu-items-grid">
           
-          <article class="drink-item">
+          <article data-product-id="item-8" data-price="500" class="drink-item">
             <div class="drink-header">
               <h3 class="drink-name">Coca-Cola</h3>
               <span class="drink-price">R$ 5,00</span>
@@ -186,7 +187,7 @@
             <span class="drink-detail">Lata 350 ml • Tradicional gelada</span>
           </article>
 
-          <article class="drink-item">
+          <article data-product-id="item-9" data-price="500" class="drink-item">
             <div class="drink-header">
               <h3 class="drink-name">Fanta Laranja</h3>
               <span class="drink-price">R$ 5,00</span>
@@ -194,7 +195,7 @@
             <span class="drink-detail">Lata 350 ml • Gelada</span>
           </article>
 
-          <article class="drink-item">
+          <article data-product-id="item-10" data-price="500" class="drink-item">
             <div class="drink-header">
               <h3 class="drink-name">Guaraná Antarctica</h3>
               <span class="drink-price">R$ 5,00</span>
@@ -202,7 +203,7 @@
             <span class="drink-detail">Lata 350 ml • Gelada</span>
           </article>
 
-          <article class="drink-item">
+          <article data-product-id="item-11" data-price="500" class="drink-item">
             <div class="drink-header">
               <h3 class="drink-name">Sprite</h3>
               <span class="drink-price">R$ 5,00</span>
@@ -210,7 +211,7 @@
             <span class="drink-detail">Lata 350 ml • Limão refrescante</span>
           </article>
 
-          <article class="drink-item">
+          <article data-product-id="item-12" data-price="300" class="drink-item">
             <div class="drink-header">
               <h3 class="drink-name">Coca-Cola (Garrafinha)</h3>
               <span class="drink-price">R$ 3,00</span>
@@ -243,5 +244,40 @@
     </div>
   </footer>
 
+  <div class="cart-dock" hidden>
+    <button type="button" id="open-cart" class="primary-button" aria-haspopup="dialog">
+      <span>Ver carrinho <span id="cart-count"></span></span><strong id="cart-dock-total"></strong>
+    </button>
+  </div>
+  <p id="cart-status" class="toast" role="status" aria-live="polite"></p>
+
+  <dialog id="cart-dialog" aria-labelledby="cart-title">
+    <header class="cart-heading"><div><p class="eyebrow">JG Hamburgueria</p><h2 id="cart-title">Seu pedido</h2></div><button type="button" id="close-cart" class="close-button" aria-label="Fechar carrinho">×</button></header>
+    <div class="cart-content">
+      <p id="empty-cart">Seu carrinho está vazio. Escolha algo gostoso no cardápio!</p>
+      <div id="cart-items"></div>
+      <form id="checkout-form" hidden>
+        <fieldset><legend>Como você quer receber?</legend>
+          <div class="choice-row"><label><input type="radio" name="fulfillment" value="delivery" checked> Entrega · R$ 3,00</label><label><input type="radio" name="fulfillment" value="pickup"> Retirada · grátis</label></div>
+        </fieldset>
+        <label class="field">Seu nome<input name="customer" autocomplete="name" required maxlength="80" placeholder="Como podemos te chamar?"></label>
+        <div id="address-fields">
+          <label class="field">Rua e número<input name="address" autocomplete="street-address" required maxlength="180" placeholder="Ex.: Rua das Flores, 123"></label>
+          <label class="field">Bairro<input name="neighborhood" autocomplete="address-level3" required maxlength="80" placeholder="Seu bairro"></label>
+          <label class="field">Complemento ou referência <span>(opcional)</span><input name="reference" maxlength="180" placeholder="Apartamento, ponto de referência…"></label>
+        </div>
+        <label class="field">Forma de pagamento<select name="payment" required><option value="" disabled selected>Selecione uma opção</option><option value="pix">Pix</option><option value="debit">Cartão de débito</option><option value="credit">Cartão de crédito</option><option value="cash">Dinheiro</option></select></label>
+        <div id="cash-fields" hidden>
+          <label class="choice"><input type="checkbox" name="needsChange"> Preciso de troco</label>
+          <label class="field" id="change-field" hidden>Troco para quanto? (R$)<input name="changeFor" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Ex.: 100,00"></label>
+        </div>
+        <label class="field">Observação do pedido <span>(opcional)</span><textarea name="notes" maxlength="500" rows="2" placeholder="Algo mais que precisamos saber?"></textarea></label>
+        <div class="order-summary"><p><span>Subtotal</span><strong id="subtotal"></strong></p><p><span id="delivery-label">Entrega</span><strong id="delivery-fee"></strong></p><p class="summary-total"><span>Total</span><strong id="order-total"></strong></p></div>
+        <p class="checkout-hint">Você não paga aqui. O pedido e o pagamento serão confirmados pela hamburgueria no WhatsApp.</p>
+        <button type="submit" class="primary-button whatsapp-button">Continuar no WhatsApp <span aria-hidden="true">↗</span></button>
+        <p class="checkout-hint">No WhatsApp, toque em <strong>Enviar</strong> para solicitar seu pedido.</p>
+      </form>
+    </div>
+  </dialog>
 </body>
 </html>
