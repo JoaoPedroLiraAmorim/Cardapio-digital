@@ -5,8 +5,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   const catTabs = document.querySelectorAll(".cat-tab");
-  const navLinks = document.querySelectorAll(".nav-link");
-  const sections = document.querySelectorAll(".menu-section, .info-section");
+  const sections = document.querySelectorAll(".menu-section");
   const categoryBarWrap = document.querySelector(".category-bar-wrap");
 
   let isProgrammaticScroll = false;
@@ -42,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 700);
   };
 
-  // Centraliza a aba ativa APENAS dentro da barra horizontal (sem tocar no scroll vertical da página)
+  // Centraliza a aba ativa APENAS dentro da barra horizontal (sem interferir no scroll vertical)
   const centralizarAbaHorizontal = (targetId) => {
     if (!categoryBarWrap) return;
     const activeTab = categoryBarWrap.querySelector(`.cat-tab[href="${targetId}"]`);
@@ -58,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // Cliques nas abas da barra de categorias
+  // Cliques nas abas da barra fixa de categorias
   catTabs.forEach((tab) => {
     tab.addEventListener("click", (e) => {
       e.preventDefault();
@@ -69,19 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Cliques nos links do menu desktop
-  navLinks.forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const targetId = link.getAttribute("href");
-      if (targetId && targetId !== "#") {
-        scrollToTarget(targetId);
-      }
-    });
-  });
-
-  // Acompanhamento do scroll manual usando getBoundingClientRect leve no evento scroll
-  // (Zero chamadas a scrollIntoView() que causavam o travamento e recuo da tela)
+  // Acompanhamento do scroll manual leve e fluido
   let ticking = false;
 
   window.addEventListener("scroll", () => {

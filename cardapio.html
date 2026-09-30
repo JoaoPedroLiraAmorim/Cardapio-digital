@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#F7F2E8">
-  <meta name="description" content="JG Hamburgueria – Cardápio Digital. Consulte nossos hambúrgueres artesanais defumados, porções e bebidas. Peça diretamente com o garçom.">
+  <meta name="description" content="JG Hamburgueria – Cardápio Digital. Hambúrgueres defumados no pão de brioche, porções, bebidas e sobremesas.">
   <title>JG Hamburgueria | Cardápio Digital</title>
 
   <!-- Google Fonts: DM Serif Display para títulos retrô clássicos e Figtree para leitura moderna e limpa -->
@@ -21,35 +21,7 @@
 <body>
 
   <!-- =========================================================================
-       1. HEADER
-       ========================================================================= -->
-  <header class="site-header">
-    <div class="wrap header-wrap">
-      
-      <!-- Marca & Logo Oficial -->
-      <a href="#" class="brand-link" aria-label="JG Hamburgueria Início">
-        <img src="logo-JG.png" alt="JG Hamburgueria Logo" class="brand-logo" width="54" height="54">
-        <div class="brand-info">
-          <span class="brand-name">JG HAMBURGUERIA</span>
-          <span class="brand-tagline">Cardápio da Casa</span>
-        </div>
-      </a>
-
-      <!-- Navegação por Categorias (Desktop) -->
-      <nav class="header-nav" aria-label="Navegação do cardápio">
-        <a href="#hamburgueres" class="nav-link">Hambúrgueres</a>
-        <a href="#combos" class="nav-link">Combos</a>
-        <a href="#porcoes" class="nav-link">Porções</a>
-        <a href="#bebidas" class="nav-link">Bebidas</a>
-        <a href="#sobremesas" class="nav-link">Sobremesas</a>
-        <a href="#informacoes" class="nav-link">A Casa</a>
-      </nav>
-
-    </div>
-  </header>
-
-  <!-- =========================================================================
-       2. NAVEGAÇÃO DE CATEGORIAS (STICKY NO MOBILE & DESKTOP)
+       1. BARRA FIXA DE NAVEGAÇÃO RÁPIDA (ÚNICO HEADER DO SITE)
        ========================================================================= -->
   <nav class="category-bar" aria-label="Navegação rápida por categorias">
     <div class="wrap category-bar-wrap">
@@ -58,33 +30,26 @@
       <a href="#porcoes" class="cat-tab">Porções</a>
       <a href="#bebidas" class="cat-tab">Bebidas</a>
       <a href="#sobremesas" class="cat-tab">Sobremesas</a>
-      <a href="#informacoes" class="cat-tab">A Casa</a>
     </div>
   </nav>
 
   <!-- =========================================================================
-       3. APRESENTAÇÃO DA HAMBURGUERIA (CURTA, ELEGANTE E ACOLHEDORA)
+       2. APRESENTAÇÃO DA HAMBURGUERIA
        ========================================================================= -->
   <section class="intro-section">
     <div class="wrap intro-wrap">
       <div class="intro-logo-box">
-        <img src="logo-JG.png" alt="JG Hamburgueria" class="intro-logo" width="130" height="130">
+        <img src="logo-JG.png" alt="JG Hamburgueria" class="intro-logo" width="140" height="140">
       </div>
       <div class="intro-text-box">
-        <div class="vintage-stamp">EST. 2026 • CARNE DEFUMADA NA BRASA</div>
-        <h1 class="intro-headline">Bem-vindo à JG Hamburgueria</h1>
-        <p class="intro-subtext">Escolha seu lanche, confira nosso cardápio e faça seu pedido com o garçom.</p>
-        
-        <div class="waiter-notice">
-          <span class="notice-icon">📋</span>
-          <span class="notice-text">Cardápio de mesa digital • Atendimento pessoal com nossa equipe</span>
-        </div>
+        <h1 class="intro-headline">JG Hamburgueria</h1>
+        <p class="intro-subtext">Sabor em cada mordida! Confira nosso cardápio completo abaixo.</p>
       </div>
     </div>
   </section>
 
   <!-- =========================================================================
-       4. CONTEÚDO PRINCIPAL: SEÇÕES DO CARDÁPIO
+       3. CONTEÚDO PRINCIPAL: SEÇÕES DO CARDÁPIO
        ========================================================================= -->
   <main class="menu-container">
     <div class="wrap">
@@ -94,9 +59,6 @@
            ========================================== -->
       <section id="hamburgueres" class="menu-section">
         <header class="section-title-box">
-          <div class="ornament-line">
-            <span class="ornament-symbol">✦ 🍔 ✦</span>
-          </div>
           <h2 class="section-title">Hambúrgueres</h2>
           <p class="section-desc">Hambúrguer artesanal defumado de 160 gr., pão de brioche tostado e maionese da casa.</p>
         </header>
@@ -106,10 +68,7 @@
           <!-- Item 1 -->
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <span class="badge badge-petroleo">MAIS PEDIDO</span>
-                <h3 class="item-name">Burg da casa</h3>
-              </div>
+              <h3 class="item-name">Burg da casa</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 26,99</span>
             </div>
@@ -119,10 +78,7 @@
           <!-- Item 2 -->
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <span class="badge badge-vinho">ESPECIAL DA CASA</span>
-                <h3 class="item-name">JG</h3>
-              </div>
+              <h3 class="item-name">JG</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 25,99</span>
             </div>
@@ -132,22 +88,17 @@
           <!-- Item 3 -->
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <span class="badge badge-dourado">CLÁSSICO</span>
-                <h3 class="item-name">PCQ Adulto</h3>
-              </div>
+              <h3 class="item-name">PCQ Adulto</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 19,99</span>
             </div>
-            <p class="item-description">O clássico infalível: Pão de Brioche levemente tostado, hambúrguer defumado suculento 160 gr., generosa camada de queijo Cheddar e maionese artesanal da casa.</p>
+            <p class="item-description">Pão de Brioche levemente tostado, hambúrguer defumado suculento 160 gr., generosa camada de queijo Cheddar e maionese artesanal da casa.</p>
           </article>
 
           <!-- Item 4 -->
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <h3 class="item-name">Burb tradicional</h3>
-              </div>
+              <h3 class="item-name">Burb tradicional</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 24,00</span>
             </div>
@@ -157,10 +108,7 @@
           <!-- Item 5 -->
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <span class="badge badge-vinho">DEFUMAÇÃO LENTA</span>
-                <h3 class="item-name">Pulled pork</h3>
-              </div>
+              <h3 class="item-name">Pulled pork</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 29,99</span>
             </div>
@@ -175,9 +123,6 @@
            ========================================== -->
       <section id="combos" class="menu-section">
         <header class="section-title-box">
-          <div class="ornament-line">
-            <span class="ornament-symbol">✦ 🍟 ✦</span>
-          </div>
           <h2 class="section-title">Combos</h2>
           <p class="section-desc">Opções completas com lanche, porção de batata frita e refrigerante.</p>
         </header>
@@ -187,16 +132,13 @@
           <!-- Combo 1: PCQ Kids -->
           <article class="menu-item combo-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <span class="badge badge-dourado">COMBO COMPLETO</span>
-                <h3 class="item-name">PCQ Kids</h3>
-              </div>
+              <h3 class="item-name">PCQ Kids</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 20,00</span>
             </div>
             <p class="item-description">Pão de Brioche fofinho, hambúrguer defumado 80 gr., queijo Cheddar derretido e maionese suave da casa.</p>
             <div class="item-extra-info">
-              <span class="extra-highlight">✨ Incluso no combo:</span> Acompanha porção de batata frita crocante + 1 Coca-Cola 200 ml.
+              <span class="extra-highlight">Incluso no combo:</span> Acompanha porção de batata frita crocante + 1 Coca-Cola 200 ml.
             </div>
           </article>
 
@@ -208,9 +150,6 @@
            ========================================== -->
       <section id="porcoes" class="menu-section">
         <header class="section-title-box">
-          <div class="ornament-line">
-            <span class="ornament-symbol">✦ 🥔 ✦</span>
-          </div>
           <h2 class="section-title">Porções</h2>
           <p class="section-desc">Petiscos preparados na hora, dourados e sequinhos para compartilhar na mesa.</p>
         </header>
@@ -219,10 +158,7 @@
           
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <span class="badge badge-petroleo">PORÇÃO 200G</span>
-                <h3 class="item-name">Batata Frita</h3>
-              </div>
+              <h3 class="item-name">Batata Frita (200 g)</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 9,99</span>
             </div>
@@ -237,9 +173,6 @@
            ========================================== -->
       <section id="bebidas" class="menu-section">
         <header class="section-title-box">
-          <div class="ornament-line">
-            <span class="ornament-symbol">✦ 🥤 ✦</span>
-          </div>
           <h2 class="section-title">Bebidas</h2>
           <p class="section-desc">Refrigerantes gelados servidos no ponto perfeito.</p>
         </header>
@@ -294,9 +227,6 @@
            ========================================== -->
       <section id="sobremesas" class="menu-section">
         <header class="section-title-box">
-          <div class="ornament-line">
-            <span class="ornament-symbol">✦ 🍨 ✦</span>
-          </div>
           <h2 class="section-title">Sobremesas</h2>
           <p class="section-desc">Para fechar sua refeição com chave de ouro.</p>
         </header>
@@ -305,21 +235,16 @@
           
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <span class="badge badge-dourado">DA CASA</span>
-                <h3 class="item-name">Milkshake Artesanal 400 ml</h3>
-              </div>
+              <h3 class="item-name">Milkshake Artesanal (400 ml)</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 16,90</span>
             </div>
-            <p class="item-description">Super cremoso, batido com sorvete artesanal e calda. Sabores à sua escolha: Chocolate Belga, Morango Natural ou Ovomaltine Crocante.</p>
+            <p class="item-description">Super cremoso, batido com sorvete artesanal e calda. Sabores: Chocolate Belga, Morango Natural ou Ovomaltine Crocante.</p>
           </article>
 
           <article class="menu-item">
             <div class="item-header">
-              <div class="item-title-group">
-                <h3 class="item-name">Pudim de Leite Condensado</h3>
-              </div>
+              <h3 class="item-name">Pudim de Leite Condensado</h3>
               <div class="item-dots" aria-hidden="true"></div>
               <span class="item-price">R$ 9,00</span>
             </div>
@@ -329,47 +254,11 @@
         </div>
       </section>
 
-      <!-- ==========================================
-           INFORMAÇÕES DA CASA
-           ========================================== -->
-      <section id="informacoes" class="info-section">
-        <div class="info-box">
-          <h2 class="info-title">Padrão JG Hamburgueria</h2>
-          <p class="info-subtitle">Informações úteis sobre o nosso preparo e atendimento</p>
-
-          <div class="info-grid">
-            <div class="info-card">
-              <span class="info-icon">🥩</span>
-              <h4>Carne 100% Bovina</h4>
-              <p>Hambúrgueres preparados artesanalmente com cortes selecionados e defumação no ponto exato.</p>
-            </div>
-
-            <div class="info-card">
-              <span class="info-icon">🍞</span>
-              <h4>Pão de Brioche</h4>
-              <p>Massa leve, amanteigada e selada na manteiga para manter a suculência do lanche até a última mordida.</p>
-            </div>
-
-            <div class="info-card">
-              <span class="info-icon">🔔</span>
-              <h4>Atendimento na Mesa</h4>
-              <p>Escolheu seus pedidos? Chame o garçom. Ele terá o prazer em atendê-lo e anotar suas preferências.</p>
-            </div>
-
-            <div class="info-card">
-              <span class="info-icon">💳</span>
-              <h4>Formas de Pagamento</h4>
-              <p>Aceitamos cartões de crédito, débito, dinheiro e transferência instantânea via PIX.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
     </div>
   </main>
 
   <!-- =========================================================================
-       5. FOOTER
+       4. FOOTER
        ========================================================================= -->
   <footer class="site-footer">
     <div class="wrap footer-wrap">
@@ -378,13 +267,9 @@
         <p class="footer-motto">Sabor em cada mordida • Tradição & Amor à brasa</p>
       </div>
 
-      <div class="footer-callout">
-        <span class="callout-pill">👋 Chame o garçom para fazer seu pedido</span>
-      </div>
-
       <div class="footer-meta">
         <p>Aberto de Terça a Domingo das 18h às 23h30</p>
-        <p class="footer-copy">© 2026 JG Hamburgueria. Cardápio digital exclusivo para consulta local.</p>
+        <p class="footer-copy">© 2026 JG Hamburgueria. Todos os direitos reservados.</p>
       </div>
     </div>
   </footer>
