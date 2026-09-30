@@ -47,4 +47,4 @@ Não há painel administrativo, gestão de estoque, envio automático de WhatsAp
 
 ## Persistência desta sessão
 
-Alterações salvas em commits locais no ambiente de nuvem. A verificação de envio ao GitHub retornou **403: acesso de escrita negado**; os commits desta retomada ainda não estão nas branches remotas. Retomar pelo checkout/backup desta sessão ou enviar os commits depois de corrigir o acesso técnico de escrita. Não confundir acesso público de leitura com permissão de envio.
+Alterações publicadas na branch remota `codex/servidor-pix-cloudflare` em 30/09/2026. O envio foi feito pela integração GitHub após a renovação das permissões, e a árvore publicada foi comparada com o checkout local. A `main` permaneceu inalterada.
