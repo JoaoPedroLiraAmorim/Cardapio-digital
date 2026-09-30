@@ -75,13 +75,18 @@ export function matchesPayment(row, payment, env) {
 }
 async function applyPayment(env, row, payment, now) {
   if (!matchesPayment(row, payment, env)) fail(502, 'Pagamento não corresponde ao pedido.');
-  const status = ['pending', 'approved', 'rejected', 'cancelled', 'refunded', 'charged_back'].includes(payment.status) ? payment.status : 'pending';
-  // An older notification cannot turn an approved/refunded payment back into pending.
-  await query(env, `UPDATE orders SET payment_id=?, status=?, qr_code=?, qr_code_base64=?, expires_at=?, lease_until=0, updated_at=?
+  if (!['pending', 'approved', 'rejected', 'cancelled', 'refunded', 'charged_back'].includes(payment.status)) fail(502, 'Estado de pagamento desconhecido.');
+  const status = payment.status === 'pending' && payment.expiresAt && Date.parse(payment.expiresAt) <= now ? 'expired' : payment.status;
+  // Expiration never regresses to pending; verified late approvals and reversals still advance.
+  await query(env, `UPDATE orders SET payment_id=?, status=CASE WHEN status='expired' AND ?='pending' THEN 'expired' ELSE ? END,
+    qr_code=COALESCE(?,qr_code), qr_code_base64=COALESCE(?,qr_code_base64), expires_at=?, lease_until=0, updated_at=?
     WHERE id=? AND (payment_id IS NULL OR payment_id=?)
-    AND (status IN ('creating','pending','expired') OR status=? OR (status='approved' AND ? IN ('refunded','charged_back')))`,
-    String(payment.id), status, payment.qrCode || null, payment.qrCodeBase64 || null, payment.expiresAt || row.expires_at, now,
-    row.id, String(payment.id), status, status).run();
+    AND (status IN ('creating','pending','expired') OR status=?
+      OR (status IN ('cancelled','rejected') AND ? IN ('approved','refunded','charged_back'))
+      OR (status='approved' AND ? IN ('refunded','charged_back'))
+      OR (status='refunded' AND ?='charged_back'))`,
+    String(payment.id), status, status, payment.qrCode || null, payment.qrCodeBase64 || null, payment.expiresAt || row.expires_at, now,
+    row.id, String(payment.id), status, status, status, status).run();
   return query(env, 'SELECT * FROM orders WHERE id=?', row.id).first();
 }
 async function ensurePayment(env, row, provider, now) {
@@ -99,6 +104,21 @@ async function ensurePayment(env, row, provider, now) {
     await query(env, "UPDATE orders SET lease_until=0, updated_at=? WHERE id=? AND status='creating'", now, row.id).run();
     fail(503, 'Não foi possível confirmar a criação do Pix. Repita com a mesma chave.');
   }
+}
+async function refreshPayment(env, row, provider, now) {
+  if (!row.payment_id || !['pending', 'expired'].includes(row.status)) return row;
+  const claimed = await query(env, `UPDATE orders SET lease_until=? WHERE id=? AND status IN ('pending','expired')
+    AND updated_at<=? AND lease_until<=? RETURNING id`, now + 30000, row.id, now - 10000, now).first();
+  if (claimed) {
+    try {
+      const payment = await provider.getPayment({accessToken: env.MP_ACCESS_TOKEN, paymentId: row.payment_id});
+      await applyPayment(env, row, payment, Date.now());
+    } catch {
+      await query(env, 'UPDATE orders SET lease_until=0,updated_at=? WHERE id=?', now, row.id).run();
+    }
+  }
+  // Reload after the claim: a webhook or another request may have already confirmed payment.
+  return query(env, 'SELECT * FROM orders WHERE id=?', row.id).first();
 }
 function configured(env) {
   if (env.PIX_ENABLED !== 'true' || !env.DB || !env.MP_ACCESS_TOKEN || !env.MP_WEBHOOK_SECRET || !env.RATE_LIMIT_SECRET || !/^\d+$/.test(env.MP_COLLECTOR_ID || '') || !/^https:\/\/[^/?#]+$/.test(env.PUBLIC_API_URL || '')) fail(503, 'Pix online indisponível.');
@@ -131,7 +151,7 @@ export function createWorker(provider = mercadoPago) {
         if (url.pathname === '/api/orders' && request.method === 'POST') {
           await throttle(env, 'create-ip', ip, 20, 600, now);
           const hash = await tokenHash(request);
-          const key = request.headers.get('idempotency-key');
+          const key = request.headers.get('idempotency-key')?.toLowerCase();
           if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key || '')) fail(400, 'Chave de tentativa inválida.');
           const payload = validateOrder(await readBody(request));
           const payloadHash = await sha(JSON.stringify(payload));
@@ -152,18 +172,12 @@ export function createWorker(provider = mercadoPago) {
           let row = await query(env, 'SELECT * FROM orders WHERE id=? AND token_hash=?', match[1], hash).first();
           if (!row) fail(404, 'Pedido não encontrado.');
           row = await ensurePayment(env, row, provider, now);
-          if (row.status === 'pending' && row.payment_id && row.updated_at < now - 10000) {
-            const claimed = await query(env, "UPDATE orders SET lease_until=? WHERE id=? AND status='pending' AND lease_until<=? RETURNING id", now + 30000, row.id, now).first();
-            if (claimed) {
-              try {
-                const payment = await provider.getPayment({accessToken: env.MP_ACCESS_TOKEN, paymentId: row.payment_id});
-                row = await applyPayment(env, row, payment, now);
-              } catch {
-                await query(env, 'UPDATE orders SET lease_until=0,updated_at=? WHERE id=?', now, row.id).run();
-              }
-            }
+          row = await refreshPayment(env, row, provider, now);
+          if (row.status === 'pending' && row.expires_at && Date.parse(row.expires_at) <= now) {
+            await query(env, "UPDATE orders SET status='expired' WHERE id=? AND status='pending'", row.id).run();
+            row = await query(env, 'SELECT * FROM orders WHERE id=?', row.id).first();
           }
-          return new Response(JSON.stringify(response(row)), {headers});
+          return new Response(JSON.stringify(response(row)), {status: row.status === 'creating' ? 202 : 200, headers});
         }
         fail(404, 'Rota não encontrada.');
       } catch (error) {
@@ -178,9 +192,10 @@ export function createWorker(provider = mercadoPago) {
         try {
           if (row.status === 'creating') await ensurePayment(env, row, provider, now);
           else {
-            const payment = await provider.getPayment({accessToken: env.MP_ACCESS_TOKEN, paymentId: row.payment_id});
-            const updated = await applyPayment(env, row, payment, now);
-            if (updated.status === 'pending' && updated.expires_at && Date.parse(updated.expires_at) < now) await query(env, "UPDATE orders SET status='expired' WHERE id=? AND status='pending'", row.id).run();
+            const updated = await refreshPayment(env, row, provider, now);
+            if (updated.status === 'pending' && updated.expires_at && Date.parse(updated.expires_at) <= now) {
+              await query(env, "UPDATE orders SET status='expired' WHERE id=? AND status='pending'", row.id).run();
+            }
           }
         } catch { await query(env, 'UPDATE orders SET updated_at=? WHERE id=?', now, row.id).run(); }
       }

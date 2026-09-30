@@ -106,7 +106,76 @@ test('creation rate limit prevents unlimited payment charges', async () => {
 });
 test('scheduled recovery validates payment and deletes expired personal data', async () => {
   const f=fixture(); const row=await (await f.post()).json(); f.payments.get('10001').status='approved';
+  f.env.DB.db.prepare('UPDATE orders SET updated_at=?').run(Date.now()-20000);
   await f.worker.scheduled({},f.env); assert.equal((await (await f.get(row.id)).json()).status,'approved');
   f.env.DB.db.prepare('UPDATE orders SET created_at=?').run(Date.now()-8*86400000);
   await f.worker.scheduled({},f.env); assert.equal((await f.get(row.id)).status,404);
+});
+
+
+test('expired payment hides QR and late approval is recovered through GET', async () => {
+  const f=fixture(); const row=await (await f.post()).json();
+  const past=new Date(Date.now()-60000).toISOString();
+  f.payments.get('10001').expiresAt=past;
+  f.env.DB.db.prepare('UPDATE orders SET expires_at=?,updated_at=? WHERE id=?').run(past,Date.now()-20000,row.id);
+  const expired=await (await f.get(row.id)).json();
+  assert.equal(expired.status,'expired'); assert.equal(expired.qrCode,undefined);
+  // A provider returning pending with a later expiration must not revive an expired order.
+  f.payments.get('10001').expiresAt=new Date(Date.now()+3600000).toISOString();
+  await f.webhook(); assert.equal((await (await f.get(row.id)).json()).status,'expired');
+  f.payments.get('10001').status='approved';
+  f.env.DB.db.prepare('UPDATE orders SET updated_at=?').run(Date.now()-20000);
+  assert.equal((await (await f.get(row.id)).json()).status,'approved');
+});
+test('GET and cron share one atomic payment consultation claim', async () => {
+  let unblock; const waiting=new Promise(resolve=>{unblock=resolve;}); let reads=0;
+  const f=fixture({async getPayment(){reads++; await waiting; return {...f.payments.get('10001')};}});
+  const row=await (await f.post()).json();
+  f.env.DB.db.prepare('UPDATE orders SET updated_at=?').run(Date.now()-20000);
+  const first=f.get(row.id); const second=f.worker.scheduled({},f.env);
+  // Yield until the claimed provider request is running, then release both callers.
+  await new Promise(resolve=>setImmediate(resolve)); unblock();
+  await Promise.all([first,second]); assert.equal(reads,1);
+});
+test('uncertain creation GET returns 202 while another caller owns the lease', async () => {
+  const f=fixture({async createPix(){throw Error('uncertain');}});
+  assert.equal((await f.post()).status,503);
+  const row=f.env.DB.db.prepare('SELECT * FROM orders').get();
+  f.env.DB.db.prepare('UPDATE orders SET lease_until=?').run(Date.now()+45000);
+  assert.equal((await f.get(row.id)).status,202);
+});
+test('verified late approval advances cancellation and reversed payments never regress', async () => {
+  const f=fixture(); const row=await (await f.post()).json();
+  for(const status of ['cancelled','approved','refunded','charged_back']) {
+    f.payments.get('10001').status=status; assert.equal((await f.webhook()).status,200);
+    assert.equal((await (await f.get(row.id)).json()).status,status);
+  }
+  f.payments.get('10001').status='approved'; await f.webhook();
+  assert.equal((await (await f.get(row.id)).json()).status,'charged_back');
+});
+test('unknown provider status does not create a pending payment', async () => {
+  const f=fixture(); await f.post(); f.payments.get('10001').status='unrecognized';
+  assert.equal((await f.webhook()).status,502);
+  assert.equal(f.env.DB.db.prepare('SELECT status FROM orders').get().status,'pending');
+});
+test('UUID key casing preserves the same durable attempt', async () => {
+  const f=fixture(); await f.post();
+  assert.equal((await f.post(order(),{'Idempotency-Key':f.key.toUpperCase()})).status,200);
+  assert.equal(f.calls(),1);
+});
+
+
+test('pending consultation without QR preserves saved QR until approval or expiration', async () => {
+  for (const finalState of ['approved','expired']) {
+    const f=fixture(); const row=await (await f.post()).json();
+    f.payments.get('10001').qrCode=null; f.payments.get('10001').qrCodeBase64=null;
+    f.env.DB.db.prepare('UPDATE orders SET updated_at=?').run(Date.now()-20000);
+    const recovered=await (await f.get(row.id)).json();
+    assert.equal(recovered.status,'pending'); assert.equal(recovered.qrCode,'pix-test'); assert.equal(recovered.qrCodeBase64,'cGl4');
+    if(finalState==='approved') f.payments.get('10001').status='approved';
+    else f.payments.get('10001').expiresAt=new Date(Date.now()-60000).toISOString();
+    f.env.DB.db.prepare('UPDATE orders SET updated_at=?').run(Date.now()-20000);
+    const final=await (await f.get(row.id)).json();
+    assert.equal(final.status,finalState); assert.equal(final.qrCode,undefined); assert.equal(final.qrCodeBase64,undefined);
+  }
 });

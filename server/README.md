@@ -44,7 +44,7 @@ O webhook exige assinatura válida e, mesmo assim, consulta o pagamento oficial.
 
 O D1 registra a tentativa antes da chamada ao Mercado Pago, com chave única e claim atômico. Retries reutilizam a chave original no provedor. Uma criação incerta é repetida por até 23 horas; depois desse prazo exige conferência do titular no Mercado Pago, sem gerar outra cobrança automaticamente. Essa janela conservadora deve ser conferida com a política de idempotência vigente do provedor antes de ativar.
 
-O GET recupera notificações perdidas consultando o provedor no máximo uma vez a cada 10 segundos por pedido (claim de 30 segundos). O agendamento a cada cinco minutos revalida até 50 pedidos por execução, recuperando criações recentes e pagamentos pendentes/expirados por até 48 horas. Pagamento que chega após expiração ainda pode ser confirmado por webhook. Se o agendamento estiver desativado ou atingir cotas, a recuperação periódica não funciona; monitorar esses recursos em produção.
+O GET recupera notificações perdidas para pedidos pendentes ou expirados, consultando o provedor no máximo uma vez a cada 10 segundos por pedido. GET e agendamento compartilham um claim atômico de 30 segundos: duas consultas concorrentes não fazem duas chamadas. O GET oculta o QR após expiração mesmo se a consulta oficial falhar. Se uma consulta pendente omitir o QR, o QR já salvo é preservado. Aprovação e expiração continuam escondendo-o. Uma resposta pendente antiga não revive um pedido expirado; confirmação oficial tardia e estorno continuam sendo aceitos. O agendamento a cada cinco minutos revalida até 50 pedidos por execução, recuperando criações recentes e pagamentos pendentes/expirados por até 48 horas. Pagamento que chega após expiração ainda pode ser confirmado por webhook. Se o agendamento estiver desativado ou atingir cotas, a recuperação periódica não funciona; monitorar esses recursos em produção.
 
 Limits persistentes em D1: 20 tentativas de criação por IP a cada 10 minutos, 120 consultas por IP/minuto e 500 criações novas/dia globalmente por padrão (`MAX_DAILY_ORDERS`). IP é combinado com segredo e hash, não armazenado em claro. Endereços compartilhados podem atingir limite; reavaliar conforme volume. Limites funcionam em janelas fixas e são proteção básica, não proteção completa contra ataque distribuído. Configurar regras Cloudflare e, se necessário, Turnstile antes de exposição de alto tráfego. Chamadas de webhook não dependem de CORS, mas exigem assinatura.
 
@@ -55,10 +55,14 @@ O botão gratuito de WhatsApp exige que o cliente envie a mensagem. Uma mensagem
 ## Verificação local e limites da entrega
 
 ```sh
-node --test tests/worker.test.mjs tests/mercado-pago.test.mjs
+npm test
+# Após integrar os testes do provider da branch Mercado Pago:
+node --test --test-isolation=none tests/mercado-pago.test.mjs
 ```
 
-Requer Node 24 com `node:sqlite`. Os testes do Worker executam o SQL real em SQLite local com adaptador D1 e provedor simulado: preços adulterados, bebida com observação, retry concorrente/timeout, token incorreto, assinatura inválida, confirmação/estorno, valor/recebedor divergente, recuperação sem webhook, limites de abuso e retenção. Não substituem validação no runtime Cloudflare/D1 remoto nem sandbox e conta real Mercado Pago. Antes de ativar, testar QR no banco do cliente, notificações assinadas, timeout, cancelamento, valor divergente, pagamento atrasado e fluxo até WhatsApp.
+Requer Node >=24 com `node:sqlite`, também indicado em `package.json`. `npm test` executa os 28 testes desta branch (17 Worker, 5 pedido, 6 produção); não exige instalação do Firebase CLI. O script usa `--test-isolation=none` porque, neste ambiente de nuvem, a execução isolada padrão reportou apenas arquivos como aprovados sem enumerar subtestes. Confira sempre o número e os nomes dos testes no resultado.
+
+Os testes do Worker executam o SQL real em SQLite local com adaptador D1 e provedor simulado: preços adulterados, bebida com observação, retry concorrente/timeout, token incorreto, assinatura inválida, confirmação/estorno, valor/recebedor divergente, recuperação sem webhook, expiração e aprovação tardia, concorrência GET/cron, estados de estorno, GET de criação incerta, normalização UUID, limites de abuso e retenção. Não substituem validação no runtime Cloudflare/D1 remoto nem sandbox e conta real Mercado Pago. Antes de ativar, testar QR no banco do cliente, notificações assinadas, timeout, cancelamento, valor divergente, pagamento atrasado e fluxo até WhatsApp.
 
 ## Fontes para ativação
 
