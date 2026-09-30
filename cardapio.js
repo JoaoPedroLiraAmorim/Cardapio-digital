@@ -251,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
         notes.maxLength = 240;
         notes.placeholder = "Ex.: um sem cebola, outro sem picles";
         notes.value = item.notes;
-        notes.addEventListener("input", () => { item.notes = notes.value; save(); });
+        notes.addEventListener("input", () => { if (pix.getSession()) return; item.notes = notes.value; save(); });
         label.append(notes);
         row.append(label);
       }
@@ -310,7 +310,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelector("#pix-expiration").textContent = payment.expiresAt ? `Pague até ${new Date(payment.expiresAt).toLocaleString("pt-BR")}.` : "";
     } else { qr.removeAttribute("src"); document.querySelector("#pix-code").value = ""; }
     document.querySelector("#pix-whatsapp").hidden = state !== "approved";
+    document.querySelector("#pix-whatsapp").disabled = pixBusy;
     document.querySelector("#pix-edit").hidden = !pix.isTerminal(state) || state === "approved";
+    if (state !== "approved") document.querySelector("#pix-new-order").hidden = true;
     pixRefresh.hidden = pix.isTerminal(state);
     pixRefresh.disabled = pixBusy;
     pixRefresh.textContent = payment ? "Atualizar pagamento" : "Tentar gerar Pix novamente";
@@ -335,16 +337,17 @@ document.addEventListener("DOMContentLoaded", () => {
       await promise;
       showPix();
       schedulePixPolling();
-    } catch {
+    } catch (error) {
       if (dialog.open) {
+        if (!pix.getSession()) { announce(error.message); return; }
         showPix();
         pixState.textContent = "Não conseguimos confirmar agora. Atualize o pagamento; sua tentativa será retomada sem gerar outro pedido.";
         if (poll) schedulePixPolling();
       }
-    } finally { pixBusy = false; pixRefresh.disabled = false; }
+    } finally { pixBusy = false; pixRefresh.disabled = false; document.querySelector("#pix-whatsapp").disabled = false; }
   }
   pixRefresh.addEventListener("click", () => { pixAttempts = 0; runPix(); });
-  document.querySelector("#pix-edit").addEventListener("click", () => { stopPixPolling(); pix.reset(); syncPixLock(); updateFields(); });
+  document.querySelector("#pix-edit").addEventListener("click", () => { stopPixPolling(); pix.reset(); syncPixLock(); updateFields(); document.querySelector("#checkout-submit").focus(); });
   document.querySelector("#pix-new-order").addEventListener("click", () => {
     if (pix.getSession()?.order?.status !== "approved") return;
     pix.finish();
@@ -367,7 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   document.querySelector("#pix-whatsapp").addEventListener("click", () => {
     const session = pix.getSession();
-    if (session?.order?.status !== "approved") return;
+    if (pixBusy || session?.order?.status !== "approved") return;
     const payment = session.order;
     const paidProducts = Object.fromEntries(payment.items.map(item => [item.id, { name: item.name, price: item.priceCents, allowsNotes: products[item.id]?.allowsNotes }]));
     const paidCart = payment.items.map(item => ({ id: item.id, quantity: item.quantity, notes: item.notes }));
@@ -394,8 +397,11 @@ document.addEventListener("DOMContentLoaded", () => {
       form.elements.changeFor.setCustomValidity("Informe um valor igual ou maior que o total do pedido.");
     }
     if (!form.reportValidity()) return;
-    if (pix.enabled && details.payment === "pix") { pixAttempts = 0; runPix(false, details); return; }
     if (pix.getSession()) return;
+    if (pix.enabled && details.payment === "pix") {
+      if (order.totals(cart, products, details.fulfillment).total > 150000) return announce("O Pix aceita pedidos de até R$ 1.500,00. Ajuste o carrinho.");
+      pixAttempts = 0; runPix(false, details); return;
+    }
     openWhatsapp(order.message(cart, products, details));
   });
   form.addEventListener("input", event => {

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { baseUrl, createClient, validateOrder } = require('../pix.js');
+const { baseUrl, createClient, validateOrder, validatePayload } = require('../pix.js');
 const orderRules = require('../pedido.js');
 const config = { enabled: true, apiBaseUrl: 'https://worker.example' };
 const cart = [{ id: 'item-1', quantity: 1, notes: '' }];
@@ -74,4 +74,94 @@ test('pagamento aprovado usa valores server na mensagem e conclusão explícita 
   assert.match(text, /Pedido: order-1/);
   client.reset(); assert.ok(client.getSession());
   client.finish(); assert.equal(client.getSession(), null);
+});
+
+test('validação antes da sessão mantém carrinho editável após dados e limites inválidos', async () => {
+  let calls = 0;
+  const client = createClient(config, { fetchImpl: async () => { calls++; return response(payment()); } });
+  const invalid = [
+    [cart, { ...details, payerEmail: 'invalido' }],
+    [cart, { ...details, customer: ' ' }],
+    [cart, { ...details, customer: {} }],
+    [cart, { ...details, address: '' }],
+    [[{ ...cart[0], quantity: 21 }], details],
+    [[...cart, ...cart], details],
+    [[{ ...cart[0], quantity: 20 }, { ...cart[0], id: 'item-2', quantity: 20 }, { ...cart[0], id: 'item-3', quantity: 11 }], details],
+  ];
+  for (const [items, fields] of invalid) {
+    await assert.rejects(client.start(items, fields));
+    assert.equal(client.getSession(), null);
+  }
+  assert.equal(calls, 0);
+  await client.start(cart, details);
+  assert.equal(calls, 1);
+});
+
+test('notas e dados multiline são normalizados antes do snapshot e POST idempotente', () => {
+  const payload = validatePayload([{ ...cart[0], notes: ' Sem cebola\nSem sal\t ' }], { ...details, customer: ' Cliente ', notes: 'Tocar\r\na campainha' });
+  assert.equal(payload.items[0].notes, 'Sem cebola Sem sal');
+  assert.equal(payload.customer, 'Cliente');
+  assert.equal(payload.notes, 'Tocar a campainha');
+});
+
+test('resumo é estável entre creating, pending e approved; rejeita itens/valor trocados', async () => {
+  for (const changed of [
+    payment({ status: 'approved', items: [{ ...payment().items[0], name: 'Outro produto' }] }),
+    payment({ status: 'approved', amountCents: 3400, deliveryCents: 400 }),
+    payment({ status: 'approved', items: [{ ...payment().items[0], notes: 'Outro pedido' }] }),
+  ]) {
+    const replies = [payment({ status: 'creating', qrCode: null, qrCodeBase64: null }), changed];
+    const client = createClient(config, { fetchImpl: async () => response(replies.shift()) });
+    await client.start(cart, details);
+    await assert.rejects(client.refresh());
+    assert.equal(client.getSession().order.status, 'creating');
+  }
+  const client = createClient(config, { fetchImpl: async () => response(payment({ items: [{ ...payment().items[0], id: 'item-2' }] })) });
+  await assert.rejects(client.start(cart, details));
+  assert.equal(client.getSession().order, null);
+});
+
+test('approved não regride; aceita estorno e approved tardio de expired', async () => {
+  for (const status of ['creating', 'pending', 'rejected', 'cancelled', 'expired']) {
+    const replies = [payment({ status: 'approved' }), payment({ status })];
+    const client = createClient(config, { fetchImpl: async () => response(replies.shift()) });
+    await client.start(cart, details);
+    await assert.rejects(client.refresh());
+    assert.equal(client.getSession().order.status, 'approved');
+  }
+  const replies = [payment({ status: 'expired' }), payment({ status: 'approved' }), payment({ status: 'refunded' }), payment({ status: 'approved' })];
+  const client = createClient(config, { fetchImpl: async () => response(replies.shift()) });
+  await client.start(cart, details);
+  await client.refresh(); assert.equal(client.getSession().order.status, 'approved');
+  await client.refresh(); assert.equal(client.getSession().order.status, 'refunded');
+  await assert.rejects(client.refresh());
+  assert.equal(client.getSession().order.status, 'refunded');
+});
+
+test('resposta atrasada após fechar não substitui estado e retry preserva chave', async () => {
+  let resolve;
+  const calls = [];
+  const client = createClient(config, { fetchImpl: (_url, options) => {
+    calls.push(options);
+    return calls.length === 1 ? new Promise(done => { resolve = done; }) : Promise.resolve(response(payment()));
+  } });
+  const request = client.start(cart, details);
+  client.pause();
+  resolve(response(payment({ status: 'approved' })));
+  await assert.rejects(request, { name: 'AbortError' });
+  assert.equal(client.getSession().order, null);
+  await client.refresh();
+  assert.equal(calls[0].headers['Idempotency-Key'], calls[1].headers['Idempotency-Key']);
+  assert.equal(calls[0].body, calls[1].body);
+});
+
+test('estorno pode progredir a contestação sem recuperar aprovação', async () => {
+  const replies = [payment({ status: 'approved' }), payment({ status: 'refunded' }), payment({ status: 'charged_back' }), payment({ status: 'refunded' })];
+  const client = createClient(config, { fetchImpl: async () => response(replies.shift()) });
+  await client.start(cart, details);
+  await client.refresh();
+  await client.refresh();
+  assert.equal(client.getSession().order.status, 'charged_back');
+  await assert.rejects(client.refresh());
+  assert.equal(client.getSession().order.status, 'charged_back');
 });
