@@ -9,6 +9,7 @@
   --bg-surface: #FFFDF8;      /* Superfície: Branco creme (cards e barra) */
   --primary: #521016;         /* Vinho principal da marca */
   --primary-dark: #521016;    /* Vinho escuro (footer, contraste) */
+  --title-on-green: #30070B;  /* Vinho com contraste para títulos sobre o verde */
   --accent: #D99A2B;          /* Dourado mostarda (preços) */
   --secondary: #3F6B69;       /* Verde-petróleo */
   --text-main: #241814;       /* Marrom escuro (textos dentro dos cards) */
@@ -115,6 +116,32 @@ a {
   font-weight: 700;
 }
 
+@media (max-width: 600px) {
+  .category-bar {
+    padding: 0.25rem 0;
+  }
+
+  .category-bar-wrap {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(3, 1fr);
+    gap: 0.2rem;
+    padding: 0 0.5rem;
+    overflow-x: hidden;
+  }
+
+  .cat-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.35rem 0.25rem;
+    font-size: clamp(0.75rem, 3.3vw, 0.85rem);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+}
+
 /* --- 4. Seção de Apresentação --- */
 .intro-section {
   padding: 2.5rem 0 1.5rem;
@@ -155,7 +182,7 @@ a {
 .intro-headline {
   font-family: var(--font-display);
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: #521016;
+  color: var(--title-on-green);
   line-height: 1.15;
   margin-bottom: 0.35rem;
 }
@@ -188,7 +215,7 @@ a {
 .section-title {
   font-family: var(--font-display);
   font-size: clamp(1.85rem, 4vw, 2.3rem);
-  color: var(--primary); /* Vermelho igual ao dos preços */
+  color: var(--title-on-green);
   line-height: 1.15;
 }
 

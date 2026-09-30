@@ -26,7 +26,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Atualiza imediatamente a aba ativa
     catTabs.forEach((tab) => {
-      tab.classList.toggle("active", tab.getAttribute("href") === targetId);
+      const isCurrent = tab.getAttribute("href") === targetId;
+      tab.classList.toggle("active", isCurrent);
+      if (isCurrent) tab.setAttribute("aria-current", "location");
+      else tab.removeAttribute("aria-current");
     });
     centralizarAbaHorizontal(targetId);
 
@@ -36,14 +39,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => {
-      isProgrammaticScroll = false;
-    }, 700);
+    scrollTimeout = setTimeout(finishProgrammaticScroll, 200);
   };
 
   // Centraliza a aba ativa APENAS dentro da barra horizontal (sem interferir no scroll vertical)
   const centralizarAbaHorizontal = (targetId) => {
-    if (!categoryBarWrap) return;
+    if (!categoryBarWrap || categoryBarWrap.scrollWidth <= categoryBarWrap.clientWidth) return;
     const activeTab = categoryBarWrap.querySelector(`.cat-tab[href="${targetId}"]`);
     if (!activeTab) return;
 
@@ -72,24 +73,40 @@ document.addEventListener("DOMContentLoaded", () => {
   let ticking = false;
 
   window.addEventListener("scroll", () => {
-    if (isProgrammaticScroll) return;
+    if (isProgrammaticScroll) {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(finishProgrammaticScroll, 200);
+      return;
+    }
 
     if (!ticking) {
       window.requestAnimationFrame(() => {
-        atualizarAbaAtivaPorPosicao();
+        if (!isProgrammaticScroll) atualizarAbaAtivaPorPosicao();
         ticking = false;
       });
       ticking = true;
     }
   }, { passive: true });
 
+  function finishProgrammaticScroll() {
+    clearTimeout(scrollTimeout);
+    isProgrammaticScroll = false;
+    atualizarAbaAtivaPorPosicao();
+  }
+  window.addEventListener("scrollend", finishProgrammaticScroll);
+  window.addEventListener("wheel", finishProgrammaticScroll, { passive: true });
+  window.addEventListener("touchstart", finishProgrammaticScroll, { passive: true });
+  window.addEventListener("keydown", event => {
+    if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) finishProgrammaticScroll();
+  });
+
   const atualizarAbaAtivaPorPosicao = () => {
     const navBarHeight = (document.querySelector(".category-bar")?.offsetHeight || 54) + 60;
-    let secaoAtualId = "";
+    let secaoAtualId = sections[0]?.getAttribute("id") || "";
 
     sections.forEach((section) => {
       const rect = section.getBoundingClientRect();
-      if (rect.top <= navBarHeight && rect.bottom >= navBarHeight) {
+      if (rect.top <= navBarHeight) {
         secaoAtualId = section.getAttribute("id");
       }
     });
@@ -108,9 +125,14 @@ document.addEventListener("DOMContentLoaded", () => {
             centralizarAbaHorizontal(`#${secaoAtualId}`);
           }
         }
+        if (isCurrent) tab.setAttribute("aria-current", "location");
+        else tab.removeAttribute("aria-current");
       });
     }
   };
+  atualizarAbaAtivaPorPosicao();
+  window.addEventListener("pageshow", finishProgrammaticScroll);
+  window.addEventListener("resize", finishProgrammaticScroll);
 });
 
 document.addEventListener("DOMContentLoaded", () => {

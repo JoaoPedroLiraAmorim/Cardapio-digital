@@ -1,0 +1,13 @@
+{
+  "name": "jg-hamburgueria-cardapio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "test": "node --test pedido.test.js tests/production.test.cjs",
+    "deploy": "firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.32.0"
+  }
+}

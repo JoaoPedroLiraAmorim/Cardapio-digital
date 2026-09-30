@@ -1,0 +1,6 @@
+node_modules/
+public/
+.firebase/
+.npm-cache/
+firebase-debug*.log
+*-debug.log
