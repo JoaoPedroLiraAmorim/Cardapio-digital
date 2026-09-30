@@ -1,0 +1,16 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "jg-pix",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "vars": {
+    "PIX_ENABLED": "false",
+    "ALLOWED_ORIGINS": "https://jg-hamburgueria.web.app,https://jg-hamburgueria.firebaseapp.com",
+    "PUBLIC_API_URL": "https://SUBSTITUIR.workers.dev",
+    "MAX_DAILY_ORDERS": "500"
+  },
+  "d1_databases": [{"binding": "DB", "database_name": "jg-pix-orders", "database_id": "SUBSTITUIR"}],
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "observability": {"enabled": false}
+}

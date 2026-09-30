@@ -4,3 +4,5 @@ public/
 .npm-cache/
 firebase-debug*.log
 *-debug.log
+.worktrees/
+.wrangler/
