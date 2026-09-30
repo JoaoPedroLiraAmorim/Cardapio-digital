@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFC93C">
+  <meta name="description" content="Cardápio Oficial JG Hamburgueria – Hambúrgueres artesanais defumados de 160g no pão de brioche. Sabor em cada mordida!">
+  <title>Cardápio Oficial | JG Hamburgueria</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="cardapio.css">
+
+  <!-- Scripts -->
+  <script src="cardapio.js" defer></script>
+</head>
+<body>
+
+  <!-- Topo / Hero -->
+  <header class="hero">
+    <!-- Barra superior de navegação -->
+    <nav class="topbar" aria-label="Navegação rápida">
+      <div class="wrap topbar-wrap">
+        <a href="#" class="brand" aria-label="Página Inicial JG Hamburgueria">
+          <span class="brand-name">JG HAMBURGUERIA</span>
+        </a>
+        <div class="topbar-links">
+          <a href="#lanches" class="nav-link">Lanches</a>
+          <a href="#porcoes" class="nav-link">Porções</a>
+          <a href="#bebidas" class="nav-link">Bebidas</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Conteúdo Principal do Topo -->
+    <div class="wrap hero-wrap">
+      <!-- Logo Oficial da Hamburgueria -->
+      <div class="hero-logo-container">
+        <img src="logo-JG.png" alt="JG Hamburgueria - Sabor em cada mordida" class="logo-topo" width="280" height="280">
+      </div>
+
+      <!-- Textos e Chamada para Ação -->
+      <div class="hero-content">
+        <div class="tag-badge">👑 Aqui o sabor é sempre de primeira!</div>
+        <h1>Sabor em cada mordida!</h1>
+        <p>Hambúrgueres defumados de 160 gr. preparados na brasa, servidos no pão de brioche macio e com a exclusiva maionese da casa.</p>
+        
+        <div class="cta">
+          <a class="btn btn-red" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20fazer%20um%20pedido%20na%20JG%20Hamburgueria" target="_blank" rel="noopener">
+            <svg class="icon-whatsapp" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06s-1.05-.39-2-1.23c-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.12-.22-.19-.47-.32z"/>
+            </svg>
+            Pedir pelo WhatsApp
+          </a>
+          <a class="btn btn-ghost" href="#lanches">Ver cardápio</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Barra de Categorias Rápida (Sticky no Mobile) -->
+  <nav class="category-nav" aria-label="Filtrar categorias">
+    <div class="wrap category-wrap">
+      <a href="#lanches" class="cat-pill active">🍔 Lanches</a>
+      <a href="#porcoes" class="cat-pill">🍟 Porções</a>
+      <a href="#bebidas" class="cat-pill">🥤 Bebidas</a>
+      <a href="#diferenciais" class="cat-pill">⭐ Diferenciais</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- SEÇÃO: LANCHES -->
+    <section id="lanches" class="section-cardapio">
+      <div class="wrap">
+        <header class="section-header">
+          <span class="sub-badge">HAMBÚRGUERES ARTESANAIS</span>
+          <h2>Lanches Defumados</h2>
+          <p class="lead">Preparados com hambúrguer defumado especial, pão de brioche fofinho e ingredientes selecionados.</p>
+        </header>
+
+        <div class="menu-grid">
+          <!-- 1. Burg da casa -->
+          <article class="menu-card highlight-card">
+            <div class="card-topo">
+              <div>
+                <span class="card-selo">Favorito da Galera</span>
+                <h3 class="card-nome">Burg da casa</h3>
+              </div>
+              <span class="price-tag">R$ 26,99</span>
+            </div>
+            <p class="card-desc">Pão de Brioche, hamburguer defumado 160 gr., queijo Cheddar, alface americana, tomate, bacon, cebola roxa, picles de pepino e maionese da casa.</p>
+            <div class="card-action">
+              <a class="btn-item-whats" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20pedir%20o%20Burg%20da%20casa" target="_blank" rel="noopener">Pedir este lanche</a>
+            </div>
+          </article>
+
+          <!-- 2. JG -->
+          <article class="menu-card">
+            <div class="card-topo">
+              <div>
+                <span class="card-selo">Especial da Casa</span>
+                <h3 class="card-nome">JG</h3>
+              </div>
+              <span class="price-tag">R$ 25,99</span>
+            </div>
+            <p class="card-desc">Pão de Brioche, hamburguer defumado 160 gr., queijo Cheddar, alface Americana, tomate, cebola crispe crocante e maionese da casa.</p>
+            <div class="card-action">
+              <a class="btn-item-whats" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20pedir%20o%20JG" target="_blank" rel="noopener">Pedir este lanche</a>
+            </div>
+          </article>
+
+          <!-- 3. Burb tradicional -->
+          <article class="menu-card">
+            <div class="card-topo">
+              <h3 class="card-nome">Burb tradicional</h3>
+              <span class="price-tag">R$ 24,00</span>
+            </div>
+            <p class="card-desc">Pão de Brioche, hamburguer defumado 160 gr., queijo Cheddar, rúcula fresca, picles de cebola roxa, tomate e maionese da casa.</p>
+            <div class="card-action">
+              <a class="btn-item-whats" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20pedir%20o%20Burb%20tradicional" target="_blank" rel="noopener">Pedir este lanche</a>
+            </div>
+          </article>
+
+          <!-- 4. PCQ Adulto -->
+          <article class="menu-card">
+            <div class="card-topo">
+              <h3 class="card-nome">PCQ Adulto</h3>
+              <span class="price-tag">R$ 19,99</span>
+            </div>
+            <p class="card-desc">Pão de Brioche, hambúrguer defumado 160 gr., generosa camada de queijo Cheddar derretido e maionese da casa. O clássico infalível!</p>
+            <div class="card-action">
+              <a class="btn-item-whats" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20pedir%20o%20PCQ%20Adulto" target="_blank" rel="noopener">Pedir este lanche</a>
+            </div>
+          </article>
+
+          <!-- 5. Pulled pork -->
+          <article class="menu-card">
+            <div class="card-topo">
+              <div>
+                <span class="card-selo">Defumação Lenta</span>
+                <h3 class="card-nome">Pulled pork</h3>
+              </div>
+              <span class="price-tag">R$ 29,99</span>
+            </div>
+            <p class="card-desc">Pão de Brioche, copalombo suculento defumado desfiado, molho barbecue red sauce (doce e picante) e salada coleslaw crocante.</p>
+            <div class="card-action">
+              <a class="btn-item-whats" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20pedir%20o%20Pulled%20pork" target="_blank" rel="noopener">Pedir este lanche</a>
+            </div>
+          </article>
+
+          <!-- 6. PCQ Kids (COMBO KIDS) -->
+          <article class="menu-card kids-card">
+            <div class="card-topo">
+              <div>
+                <span class="card-selo combo-kids-badge">COMBO KIDS COMPLETO</span>
+                <h3 class="card-nome">PCQ Kids</h3>
+              </div>
+              <span class="price-tag">R$ 20,00</span>
+            </div>
+            <p class="card-desc">Pão de Brioche macio, hambúrguer defumado 80 gr., queijo Cheddar e maionese da casa.</p>
+            <div class="destaque-kids-box">
+              ⭐ <strong>Acompanha batata frita e Coca-Cola 200 ml!</strong>
+            </div>
+            <div class="card-action">
+              <a class="btn-item-whats" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20pedir%20o%20Combo%20PCQ%20Kids" target="_blank" rel="noopener">Pedir Combo Kids</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: PORÇÕES -->
+    <section id="porcoes" class="section-porcoes">
+      <div class="wrap">
+        <header class="section-header">
+          <span class="sub-badge">PETISCOS & ACOMPANHAMENTOS</span>
+          <h2>Porção</h2>
+          <p class="lead">Feita na hora, crocante e perfeita para acompanhar seu lanche.</p>
+        </header>
+
+        <div class="porcao-container">
+          <article class="porcao-card">
+            <div class="porcao-content">
+              <div class="porcao-header">
+                <div>
+                  <span class="porcao-badge">🍟 200 GRAMAS</span>
+                  <h3 class="porcao-titulo">Batata Frita</h3>
+                </div>
+                <div class="porcao-preco-tag">R$ 9,99</div>
+              </div>
+              <p class="porcao-destaque">Crocante, quentinha e deliciosa!</p>
+              <p class="porcao-desc">Batatas fritas douradas, sequinhas e crocantes por fora e macias por dentro. Porção generosa de 200 g.</p>
+              <a class="btn btn-red btn-porcao" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Quero%20adicionar%20uma%20Por%C3%A7%C3%A3o%20de%20Batata%20Frita%20ao%20meu%20pedido" target="_blank" rel="noopener">
+                Pedir Batata Frita (R$ 9,99)
+              </a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: BEBIDAS -->
+    <section id="bebidas" class="section-bebidas">
+      <div class="wrap">
+        <header class="section-header">
+          <span class="sub-badge">REFRIGERANTES GELADOS</span>
+          <h2>Bebidas</h2>
+          <p class="lead">Para acompanhar seu burguer bem geladinho.</p>
+        </header>
+
+        <div class="bebidas-grid">
+          <!-- Coca-Cola 350ml -->
+          <article class="bebida-card">
+            <div class="bebida-icon">🥫</div>
+            <div class="bebida-info">
+              <h3 class="bebida-nome">Coca-Cola</h3>
+              <span class="bebida-vol">Lata 350 ml</span>
+            </div>
+            <div class="bebida-preco">R$ 5,00</div>
+          </article>
+
+          <!-- Fanta Laranja 350ml -->
+          <article class="bebida-card">
+            <div class="bebida-icon">🥫</div>
+            <div class="bebida-info">
+              <h3 class="bebida-nome">Fanta Laranja</h3>
+              <span class="bebida-vol">Lata 350 ml</span>
+            </div>
+            <div class="bebida-preco">R$ 5,00</div>
+          </article>
+
+          <!-- Guaraná Antarctica 350ml -->
+          <article class="bebida-card">
+            <div class="bebida-icon">🥫</div>
+            <div class="bebida-info">
+              <h3 class="bebida-nome">Guaraná Antarctica</h3>
+              <span class="bebida-vol">Lata 350 ml</span>
+            </div>
+            <div class="bebida-preco">R$ 5,00</div>
+          </article>
+
+          <!-- Sprite 350ml -->
+          <article class="bebida-card">
+            <div class="bebida-icon">🥫</div>
+            <div class="bebida-info">
+              <h3 class="bebida-nome">Sprite</h3>
+              <span class="bebida-vol">Lata 350 ml</span>
+            </div>
+            <div class="bebida-preco">R$ 5,00</div>
+          </article>
+
+          <!-- Coca-Cola 200ml -->
+          <article class="bebida-card">
+            <div class="bebida-icon">🍾</div>
+            <div class="bebida-info">
+              <h3 class="bebida-nome">Coca-Cola</h3>
+              <span class="bebida-vol">Garrafinha 200 ml</span>
+            </div>
+            <div class="bebida-preco">R$ 3,00</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SELOS DE QUALIDADE / DIFERENCIAIS -->
+    <section id="diferenciais" class="section-diferenciais">
+      <div class="wrap">
+        <header class="section-header text-center">
+          <span class="sub-badge">PADRÃO JG DE QUALIDADE</span>
+          <h2>Nossos Diferenciais</h2>
+        </header>
+
+        <div class="diferenciais-grid">
+          <div class="dif-card">
+            <span class="dif-icon">🍔</span>
+            <strong>Ingredientes Selecionados</strong>
+            <p>Blend fresco e ingredientes de alto padrão em cada receita.</p>
+          </div>
+
+          <div class="dif-card">
+            <span class="dif-icon">🔥</span>
+            <strong>Churrasco no Ponto</strong>
+            <p>Hambúrguer defumado com sabor e aroma inconfundíveis.</p>
+          </div>
+
+          <div class="dif-card">
+            <span class="dif-icon">⭐</span>
+            <strong>Qualidade Premium</strong>
+            <p>Processo artesanal do pão à maionese especial da casa.</p>
+          </div>
+
+          <div class="dif-card">
+            <span class="dif-icon">🧀</span>
+            <strong>Queijo de Verdade</strong>
+            <p>Cheddar cremoso e queijo derretido no ponto certo.</p>
+          </div>
+
+          <div class="dif-card">
+            <span class="dif-icon">🛵</span>
+            <strong>Delivery Rápido</strong>
+            <p>Seu pedido chega quentinho e no menor tempo possível.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BANNER DE CHAMADA FINAL -->
+    <section class="banner-cta">
+      <div class="wrap banner-wrap">
+        <h2>Bateu aquela fome?</h2>
+        <p>Faça seu pedido diretamente pelo WhatsApp e receba no conforto da sua casa!</p>
+        <a class="btn btn-red btn-banner" href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Gostaria%20de%20fazer%20um%20pedido%20na%20JG%20Hamburgueria" target="_blank" rel="noopener">
+          <svg class="icon-whatsapp" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06s-1.05-.39-2-1.23c-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.12-.22-.19-.47-.32z"/>
+          </svg>
+          Abrir WhatsApp e Pedir Agora
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Rodapé -->
+  <footer class="rodape">
+    <div class="wrap rodape-wrap">
+      <div class="rodape-col">
+        <strong>JG Hamburgueria</strong>
+        <p>Sabor em cada mordida! Hambúrguer artesanal feito com paixão.</p>
+      </div>
+
+      <div class="rodape-col">
+        <strong>Atendimento & Pedidos</strong>
+        <p>Peça direto pelo WhatsApp com entrega rápida.</p>
+        <a class="rodape-link-whats" href="https://wa.me/5500000000000" target="_blank" rel="noopener">
+          WhatsApp: (00) 00000-0000
+        </a>
+      </div>
+    </div>
+    <div class="rodape-bottom">
+      <p>© 2026 JG Hamburgueria. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- Botão Flutuante do WhatsApp para Celular -->
+  <a href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Vim%20pelo%20card%C3%A1pio%20digital%20e%20gostaria%20de%20fazer%20um%20pedido." 
+     class="whatsapp-float" 
+     target="_blank" 
+     rel="noopener" 
+     aria-label="Fazer pedido pelo WhatsApp">
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06s-1.05-.39-2-1.23c-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.12-.22-.19-.47-.32z"/>
+    </svg>
+    <span class="whatsapp-float-text">Pedir</span>
+  </a>
+
+</body>
+</html>

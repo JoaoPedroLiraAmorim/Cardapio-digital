@@ -1,0 +1,849 @@
+/* ==========================================================================
+   CARDÁPIO OFICIAL - JG HAMBURGUERIA
+   Design System & Mobile-First CSS
+   ========================================================================== */
+
+/* --- 1. Variáveis Globais e Reset --- */
+:root {
+  --hero: #FFC93C;
+  --hero-light: #FFE382;
+  --ink: #2B1A12;
+  --red: #D7263D;
+  --red-hover: #b81d30;
+  --bg: #FDFBF7;
+  --card-bg: #FFFFFF;
+  --soft: #FFF4D0;
+  --muted: #665042;
+  --foot-bg: #1E120C;
+  --foot-fg: #FFD866;
+  --whats: #25D366;
+  --whats-hover: #20BA5A;
+  --gold: #FFB300;
+  
+  --display: "Bowlby One", "Arial Black", Impact, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  
+  --shadow-retro: 4px 4px 0 var(--ink);
+  --shadow-retro-sm: 2px 2px 0 var(--ink);
+  --shadow-retro-hover: 6px 6px 0 var(--ink);
+  --radius-card: 16px;
+  --radius-pill: 999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --hero: #1E120C;
+    --hero-light: #2B1A12;
+    --ink: #FFD866;
+    --red: #FF4D5E;
+    --red-hover: #e6394a;
+    --bg: #120A07;
+    --card-bg: #1C120C;
+    --soft: #26160F;
+    --muted: #CDB89F;
+    --foot-bg: #0A0503;
+    --foot-fg: #FFD866;
+    --shadow-retro: 4px 4px 0 rgba(0, 0, 0, 0.6);
+    --shadow-retro-sm: 2px 2px 0 rgba(0, 0, 0, 0.6);
+    --shadow-retro-hover: 6px 6px 0 rgba(0, 0, 0, 0.7);
+  }
+}
+
+:root[data-theme="dark"] {
+  --hero: #1E120C;
+  --hero-light: #2B1A12;
+  --ink: #FFD866;
+  --red: #FF4D5E;
+  --red-hover: #e6394a;
+  --bg: #120A07;
+  --card-bg: #1C120C;
+  --soft: #26160F;
+  --muted: #CDB89F;
+  --foot-bg: #0A0503;
+  --foot-fg: #FFD866;
+  --shadow-retro: 4px 4px 0 rgba(0, 0, 0, 0.6);
+  --shadow-retro-sm: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  --shadow-retro-hover: 6px 6px 0 rgba(0, 0, 0, 0.7);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 1rem;
+  line-height: 1.55;
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 3px;
+}
+
+/* Container Responsivo */
+.wrap {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* --- 2. Tipografia & Tags --- */
+h1, h2, h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: clamp(2rem, 7vw, 3.4rem);
+}
+
+h2 {
+  font-size: clamp(1.75rem, 5.5vw, 2.6rem);
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+.lead {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  max-width: 52ch;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.sub-badge {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 0.8rem;
+  color: var(--red);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: var(--ink);
+  color: var(--hero);
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-pill);
+  margin-bottom: 0.85rem;
+}
+
+/* --- 3. Botões (Mobile-First 48px Touch Friendly) --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--display);
+  font-size: 1rem;
+  text-align: center;
+  padding: 0.9rem 1.4rem;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-retro);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 48px;
+  width: 100%;
+}
+
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-retro-sm);
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    transform: translate(2px, 2px);
+    box-shadow: var(--shadow-retro-sm);
+  }
+}
+
+.btn-red {
+  background: var(--red);
+  color: #FFFFFF;
+}
+
+.btn-red:hover {
+  background: var(--red-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.btn-ghost:hover {
+  background: rgba(43, 26, 18, 0.08);
+}
+
+/* --- 4. Topo & Hero --- */
+.hero {
+  background: var(--hero);
+  border-bottom: 4px solid var(--ink);
+  padding-bottom: 2rem;
+}
+
+.topbar {
+  padding: 0.85rem 0;
+  border-bottom: 2px dashed rgba(43, 26, 18, 0.25);
+}
+
+.topbar-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand-name {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.topbar-links {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.nav-link {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--ink);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.nav-link:hover {
+  background: rgba(43, 26, 18, 0.1);
+}
+
+/* Conteúdo do Hero com a Logo no Topo */
+.hero-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 1.5rem;
+  gap: 1.25rem;
+}
+
+.hero-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-topo {
+  width: clamp(170px, 52vw, 250px);
+  height: auto;
+  border-radius: 16px;
+  background: #FFFFFF;
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow-retro);
+  padding: 6px;
+  animation: logoSurge 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+@keyframes logoSurge {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 580px;
+}
+
+.hero-content p {
+  font-size: 1.05rem;
+  margin: 0.85rem 0 1.5rem;
+  color: var(--muted);
+  max-width: 44ch;
+}
+
+.cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 380px;
+}
+
+.icon-whatsapp {
+  flex-shrink: 0;
+}
+
+/* --- 5. Barra de Categorias Rápida (Sticky Mobile) --- */
+.category-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--ink);
+  border-bottom: 3px solid var(--red);
+  padding: 0.65rem 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.category-wrap {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.category-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+.cat-pill {
+  flex-shrink: 0;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.cat-pill:hover,
+.cat-pill.active {
+  background: var(--hero);
+  color: var(--ink);
+  border-color: var(--hero);
+}
+
+/* --- 6. Seções Comuns --- */
+.section-cardapio,
+.section-porcoes,
+.section-bebidas,
+.section-diferenciais {
+  padding: 3rem 0;
+}
+
+.section-header {
+  margin-bottom: 1.75rem;
+}
+
+/* --- 7. Grid e Cards dos Lanches --- */
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+.menu-card {
+  background: var(--card-bg);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-retro);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+@media (hover: hover) {
+  .menu-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-retro-hover);
+  }
+}
+
+.highlight-card {
+  border-color: var(--ink);
+  background: linear-gradient(to bottom, #FFFAEA, var(--card-bg));
+}
+
+.card-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.card-selo {
+  display: inline-block;
+  font-family: var(--body);
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--red);
+  background: var(--soft);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  margin-bottom: 0.25rem;
+  border: 1px solid rgba(43, 26, 18, 0.15);
+}
+
+.card-nome {
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.price-tag {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  color: #FFFFFF;
+  background: var(--red);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink);
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.card-desc {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.card-action {
+  margin-top: 0.25rem;
+}
+
+.btn-item-whats {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--soft);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.btn-item-whats:hover {
+  background: var(--hero);
+}
+
+/* Card Especial PCQ Kids (Combo Kids) */
+.kids-card {
+  border-color: var(--red);
+  border-width: 3px;
+  background: linear-gradient(to bottom, #FFF3F4, var(--card-bg));
+}
+
+.combo-kids-badge {
+  background: var(--red);
+  color: #FFFFFF;
+}
+
+.destaque-kids-box {
+  background: var(--hero);
+  color: var(--ink);
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  border: 2px dashed var(--ink);
+  font-size: 0.9rem;
+}
+
+/* --- 8. Seção Porção (Batata Frita) --- */
+.section-porcoes {
+  background: var(--soft);
+  border-block: 4px solid var(--ink);
+}
+
+.porcao-card {
+  background: var(--card-bg);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-retro);
+  padding: 1.5rem;
+}
+
+.porcao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.porcao-badge {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 0.8rem;
+  color: var(--red);
+  margin-bottom: 0.25rem;
+}
+
+.porcao-titulo {
+  font-size: 1.4rem;
+}
+
+.porcao-preco-tag {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  color: #FFFFFF;
+  background: var(--red);
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+.porcao-destaque {
+  font-family: var(--display);
+  color: var(--red);
+  font-size: 1.05rem;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.porcao-desc {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+}
+
+.btn-porcao {
+  width: 100%;
+}
+
+/* --- 9. Seção Bebidas --- */
+.bebidas-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+.bebida-card {
+  background: var(--card-bg);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-retro-sm);
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: transform 0.15s;
+}
+
+.bebida-card:hover {
+  transform: translateY(-2px);
+}
+
+.bebida-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.bebida-info {
+  flex: 1;
+}
+
+.bebida-nome {
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.bebida-vol {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.bebida-preco {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  color: var(--red);
+  background: var(--soft);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--ink);
+}
+
+/* --- 10. Seção Diferenciais --- */
+.section-diferenciais {
+  background: var(--ink);
+  color: #FFFFFF;
+}
+
+.section-diferenciais h2 {
+  color: var(--hero);
+}
+
+.section-diferenciais .sub-badge {
+  color: var(--hero);
+}
+
+.diferenciais-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.dif-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 201, 60, 0.35);
+  border-radius: 14px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.dif-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.dif-card strong {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  color: var(--hero);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.dif-card p {
+  font-size: 0.9rem;
+  color: #d8cec5;
+}
+
+/* --- 11. Banner CTA Final --- */
+.banner-cta {
+  background: var(--red);
+  color: #FFFFFF;
+  padding: 3rem 0;
+  text-align: center;
+  border-bottom: 4px solid var(--ink);
+}
+
+.banner-wrap h2 {
+  color: #FFFFFF;
+  margin-bottom: 0.5rem;
+}
+
+.banner-wrap p {
+  font-size: 1.05rem;
+  max-width: 44ch;
+  margin: 0 auto 1.5rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.btn-banner {
+  background: var(--hero);
+  color: var(--ink);
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.btn-banner:hover {
+  background: #FFFFFF;
+}
+
+/* --- 12. Rodapé --- */
+.rodape {
+  background: var(--foot-bg);
+  color: var(--foot-fg);
+  padding: 2.5rem 0 5.5rem;
+  font-size: 0.95rem;
+}
+
+.rodape-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.rodape-col strong {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #FFFFFF;
+}
+
+.rodape-col p {
+  color: #d1c7bd;
+  line-height: 1.5;
+}
+
+.rodape-link-whats {
+  display: inline-block;
+  margin-top: 0.4rem;
+  color: var(--hero);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.rodape-bottom {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- 13. Botão Flutuante do WhatsApp --- */
+.whatsapp-float {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 999;
+  background-color: var(--whats);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.15rem;
+  border-radius: var(--radius-pill);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  text-decoration: none;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  animation: pulseFloat 2.5s infinite ease-in-out;
+}
+
+.whatsapp-float:active {
+  transform: scale(0.95);
+}
+
+@keyframes pulseFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* ==========================================================================
+   BREAKPOINTS: Tablets e Desktops (Progressive Enhancement)
+   ========================================================================== */
+
+/* Tablets (a partir de 640px) */
+@media (min-width: 640px) {
+  .wrap {
+    padding: 0 1.5rem;
+  }
+
+  .cta {
+    flex-direction: row;
+    width: auto;
+  }
+
+  .btn {
+    width: auto;
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .bebidas-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .diferenciais-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .rodape-wrap {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+/* Desktops e Telas Maiores (a partir de 900px) */
+@media (min-width: 900px) {
+  .hero-wrap {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    text-align: left;
+    padding-top: 2.5rem;
+    padding-bottom: 1.5rem;
+    gap: 3rem;
+  }
+
+  .hero-content {
+    align-items: flex-start;
+  }
+
+  .logo-topo {
+    width: 280px;
+  }
+
+  .bebidas-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .diferenciais-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
