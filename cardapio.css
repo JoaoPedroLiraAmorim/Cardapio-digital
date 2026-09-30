@@ -5,13 +5,13 @@
 
 /* --- 1. Paleta Oficial & Variáveis --- */
 :root {
-  --bg-main: #F7F2E8;         /* Fundo principal: Creme quente (60%) */
-  --bg-surface: #FFFDF8;      /* Superfície: Branco creme (25%) */
-  --primary: #7A1820;         /* Vinho principal da marca */
+  --bg-main: #416B6A;         /* Fundo principal: Azul-petróleo vintage da logo */
+  --bg-surface: #FFFDF8;      /* Superfície: Branco creme (cards e barra) */
+  --primary: #521016;         /* Vinho principal da marca */
   --primary-dark: #521016;    /* Vinho escuro (footer, contraste) */
   --accent: #D99A2B;          /* Dourado mostarda (preços) */
   --secondary: #3F6B69;       /* Verde-petróleo */
-  --text-main: #241814;       /* Marrom escuro (textos principais - 10%) */
+  --text-main: #241814;       /* Marrom escuro (textos dentro dos cards) */
   --text-secondary: #786B60;  /* Marrom cinza (descrições) */
   --border: #E7D7C7;          /* Bege (bordas e divisórias) */
 
@@ -72,9 +72,9 @@ a {
   position: sticky;
   top: 0;
   z-index: 100;
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-subtle);
+  background-color: var(--primary-dark); /* Mesmo vermelho do footer */
+  border-bottom: 2px solid var(--accent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   padding: 0.65rem 0;
 }
 
@@ -96,7 +96,7 @@ a {
   border-radius: var(--radius-pill);
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-main);
+  color: #F7EBE1;
   background-color: transparent;
   border: 1px solid transparent;
   transition: all 0.15s ease;
@@ -104,19 +104,20 @@ a {
 }
 
 .cat-tab:hover {
-  color: var(--primary-dark);
-  background-color: var(--bg-main);
+  color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .cat-tab.active {
-  background-color: var(--primary);
-  color: var(--bg-surface);
-  border-color: var(--primary);
+  background-color: #FFFFFF; /* Fundo branco quando selecionado */
+  color: var(--primary-dark);
+  border-color: #FFFFFF;
+  font-weight: 700;
 }
 
 /* --- 4. Seção de Apresentação --- */
 .intro-section {
-  padding: 2.25rem 0 1.5rem;
+  padding: 2.5rem 0 1.5rem;
   text-align: center;
 }
 
@@ -132,9 +133,9 @@ a {
   justify-content: center;
 }
 
-/* Logo PNG Transparente sem fundo ou caixas */
+/* Logo PNG Transparente aumentada em 15% */
 .intro-logo {
-  width: 130px;
+  width: 150px;
   height: auto;
   max-width: 100%;
   display: block;
@@ -147,21 +148,21 @@ a {
 
 @media (min-width: 600px) {
   .intro-logo {
-    width: 150px;
+    width: 175px;
   }
 }
 
 .intro-headline {
   font-family: var(--font-display);
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--text-main);
+  color: #521016;
   line-height: 1.15;
   margin-bottom: 0.35rem;
 }
 
 .intro-subtext {
   font-size: 1.05rem;
-  color: var(--text-secondary);
+  color: #E7D7C7;
   max-width: 44ch;
   margin: 0 auto;
 }
@@ -180,20 +181,20 @@ a {
 .section-title-box {
   text-align: center;
   margin-bottom: 1.75rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   padding-bottom: 1rem;
 }
 
 .section-title {
   font-family: var(--font-display);
   font-size: clamp(1.85rem, 4vw, 2.3rem);
-  color: var(--primary);
+  color: var(--primary); /* Vermelho igual ao dos preços */
   line-height: 1.15;
 }
 
 .section-desc {
   font-size: 0.95rem;
-  color: var(--text-secondary);
+  color: #E7D7C7;
   margin-top: 0.35rem;
   max-width: 48ch;
   margin-left: auto;
@@ -233,7 +234,7 @@ a {
 .item-name {
   font-family: var(--font-display);
   font-size: 1.35rem;
-  color: var(--text-main);
+  color: var(--primary); /* Nome dos lanches em vermelho */
   line-height: 1.2;
 }
 
@@ -271,7 +272,7 @@ a {
 }
 
 .item-extra-info {
-  background-color: var(--bg-main);
+  background-color: var(--border);
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
   padding: 0.6rem 0.85rem;
@@ -317,7 +318,7 @@ a {
 .drink-name {
   font-family: var(--font-display);
   font-size: 1.15rem;
-  color: var(--text-main);
+  color: var(--primary);
 }
 
 .drink-price {
