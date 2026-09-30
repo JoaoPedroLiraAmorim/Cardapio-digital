@@ -397,6 +397,13 @@ a {
 }
 
 /* Pedido e carrinho */
+#pix-panel { padding-top: 1.25rem; }
+#pix-title { font-family: var(--font-display); color: var(--primary); font-size: 1.5rem; }
+#pix-state { margin-top: .65rem; }
+#pix-qr { display: block; max-width: 100%; height: auto; margin: 1rem auto; background: white; border-radius: 8px; }
+#pix-panel .primary-button { margin-top: .8rem; justify-content: center; }
+#pix-code { overflow-wrap: anywhere; font-size: .8rem; }
+.pix-secondary { display: block; min-height: 44px; margin: .8rem auto 0; padding: .6rem 1rem; border: 1px solid var(--primary); border-radius: 8px; color: var(--primary); background: transparent; }
 [hidden] { display: none !important; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }

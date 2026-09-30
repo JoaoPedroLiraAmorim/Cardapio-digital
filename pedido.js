@@ -1,6 +1,6 @@
 /* Regras do pedido: valores em centavos; nenhum pagamento é processado aqui. */
 (function (root) {
-  const config = { whatsapp: "5512981440776", deliveryFee: 300 };
+  const config = { whatsapp: "5512981440776", deliveryFee: 300, pix: { enabled: false, apiBaseUrl: "" } };
   const payments = { cash: "Dinheiro", debit: "Cartão de débito", credit: "Cartão de crédito", pix: "Pix" };
   const money = cents => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const clean = value => String(value || "").replace(/[\r\n]+/g, " ").trim();
@@ -16,7 +16,7 @@
     return { subtotal, delivery, total: subtotal + delivery };
   }
   function message(cart, products, details) {
-    const amounts = totals(cart, products, details.fulfillment);
+    const amounts = details.confirmedPayment || totals(cart, products, details.fulfillment);
     const lines = ["Olá! Quero fazer um pedido na JG Hamburgueria.", "", `Cliente: ${clean(details.customer)}`, `Tipo: ${details.fulfillment === "delivery" ? "Entrega" : "Retirada"}`];
     if (details.fulfillment === "delivery") {
       lines.push(`Endereço: ${clean(details.address)}`, `Bairro: ${clean(details.neighborhood)}`);
@@ -29,6 +29,7 @@
       if (product.allowsNotes && clean(item.notes)) lines.push(`  Observação: ${clean(item.notes)}`);
     });
     lines.push("", `Subtotal: ${money(amounts.subtotal)}`, `Entrega: ${money(amounts.delivery)}`, `Total: ${money(amounts.total)}`, "", `Pagamento: ${payments[details.payment]}`);
+    if (details.payment === "pix" && details.confirmedPayment) lines.push("Pix confirmado pelo Mercado Pago.", `Pedido: ${clean(details.confirmedPayment.id)}`);
     if (details.payment === "cash") lines.push(details.needsChange ? `Troco para: ${money(details.changeFor)}` : "Não preciso de troco.");
     if (clean(details.notes)) lines.push(`Observação do pedido: ${clean(details.notes)}`);
     lines.push("", "Aguardo a confirmação do pedido pela hamburgueria.");
