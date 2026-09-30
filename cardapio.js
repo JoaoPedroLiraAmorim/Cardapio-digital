@@ -1,56 +1,127 @@
 /**
- * Cardápio Oficial - JG Hamburgueria (JS Puro)
+ * JG Hamburgueria - Cardápio Digital (Consulta Local)
+ * Navegação suave e precisa sem travamentos ou puxões no scroll
  */
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Rolagem suave para links internos
-  const linksInternos = document.querySelectorAll('a[href^="#"]');
-  const catPills = document.querySelectorAll(".cat-pill");
+  const catTabs = document.querySelectorAll(".cat-tab");
+  const navLinks = document.querySelectorAll(".nav-link");
+  const sections = document.querySelectorAll(".menu-section, .info-section");
+  const categoryBarWrap = document.querySelector(".category-bar-wrap");
 
-  linksInternos.forEach((link) => {
-    link.addEventListener("click", (evento) => {
-      const idDestino = link.getAttribute("href");
-      if (idDestino && idDestino !== "#") {
-        const elementoDestino = document.querySelector(idDestino);
-        if (elementoDestino) {
-          evento.preventDefault();
-          elementoDestino.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-          });
+  let isProgrammaticScroll = false;
+  let scrollTimeout = null;
 
-          // Atualiza estado ativo das pílulas de categoria se aplicável
-          catPills.forEach((p) => p.classList.remove("active"));
-          const pillCorrespondente = document.querySelector(`.cat-pill[href="${idDestino}"]`);
-          if (pillCorrespondente) {
-            pillCorrespondente.classList.add("active");
-          }
-        }
+  // Função para rolar até a seção desejada compensando a barra fixa
+  const scrollToTarget = (targetId) => {
+    const targetElement = document.querySelector(targetId);
+    if (!targetElement) return;
+
+    const navBar = document.querySelector(".category-bar");
+    const navBarHeight = navBar ? navBar.offsetHeight : 54;
+    
+    // Calcula posição exata
+    const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - navBarHeight - 10;
+
+    isProgrammaticScroll = true;
+
+    // Atualiza imediatamente a aba ativa
+    catTabs.forEach((tab) => {
+      tab.classList.toggle("active", tab.getAttribute("href") === targetId);
+    });
+    centralizarAbaHorizontal(targetId);
+
+    window.scrollTo({
+      top: targetPosition,
+      behavior: "smooth"
+    });
+
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      isProgrammaticScroll = false;
+    }, 700);
+  };
+
+  // Centraliza a aba ativa APENAS dentro da barra horizontal (sem tocar no scroll vertical da página)
+  const centralizarAbaHorizontal = (targetId) => {
+    if (!categoryBarWrap) return;
+    const activeTab = categoryBarWrap.querySelector(`.cat-tab[href="${targetId}"]`);
+    if (!activeTab) return;
+
+    const tabLeft = activeTab.offsetLeft;
+    const tabWidth = activeTab.offsetWidth;
+    const containerWidth = categoryBarWrap.offsetWidth;
+
+    categoryBarWrap.scrollTo({
+      left: tabLeft - (containerWidth / 2) + (tabWidth / 2),
+      behavior: "smooth"
+    });
+  };
+
+  // Cliques nas abas da barra de categorias
+  catTabs.forEach((tab) => {
+    tab.addEventListener("click", (e) => {
+      e.preventDefault();
+      const targetId = tab.getAttribute("href");
+      if (targetId && targetId !== "#") {
+        scrollToTarget(targetId);
       }
     });
   });
 
-  // 2. Acompanhamento automático da rolagem para destacar categoria ativa
-  const secoes = document.querySelectorAll("section[id]");
-  
-  if ("IntersectionObserver" in window && secoes.length > 0) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const id = entry.target.getAttribute("id");
-          catPills.forEach((pill) => {
-            const match = pill.getAttribute("href") === `#${id}`;
-            pill.classList.toggle("active", match);
-            if (match) {
-              pill.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
-            }
-          });
-        }
+  // Cliques nos links do menu desktop
+  navLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const targetId = link.getAttribute("href");
+      if (targetId && targetId !== "#") {
+        scrollToTarget(targetId);
+      }
+    });
+  });
+
+  // Acompanhamento do scroll manual usando getBoundingClientRect leve no evento scroll
+  // (Zero chamadas a scrollIntoView() que causavam o travamento e recuo da tela)
+  let ticking = false;
+
+  window.addEventListener("scroll", () => {
+    if (isProgrammaticScroll) return;
+
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        atualizarAbaAtivaPorPosicao();
+        ticking = false;
       });
-    }, {
-      rootMargin: "-20% 0px -60% 0px"
+      ticking = true;
+    }
+  }, { passive: true });
+
+  const atualizarAbaAtivaPorPosicao = () => {
+    const navBarHeight = (document.querySelector(".category-bar")?.offsetHeight || 54) + 60;
+    let secaoAtualId = "";
+
+    sections.forEach((section) => {
+      const rect = section.getBoundingClientRect();
+      if (rect.top <= navBarHeight && rect.bottom >= navBarHeight) {
+        secaoAtualId = section.getAttribute("id");
+      }
     });
 
-    secoes.forEach((secao) => observer.observe(secao));
-  }
+    // Se estiver no topo da página
+    if (window.pageYOffset < 150) {
+      secaoAtualId = sections[0]?.getAttribute("id") || "";
+    }
+
+    if (secaoAtualId) {
+      catTabs.forEach((tab) => {
+        const isCurrent = tab.getAttribute("href") === `#${secaoAtualId}`;
+        if (tab.classList.contains("active") !== isCurrent) {
+          tab.classList.toggle("active", isCurrent);
+          if (isCurrent) {
+            centralizarAbaHorizontal(`#${secaoAtualId}`);
+          }
+        }
+      });
+    }
+  };
 });

@@ -1,71 +1,38 @@
 /* ==========================================================================
-   CARDÁPIO OFICIAL - JG HAMBURGUERIA
-   Design System & Mobile-First CSS
+   JG HAMBURGUERIA - CARDÁPIO DIGITAL EXCLUSIVO PARA CONSULTA LOCAL
+   Design System Oficial & Estética Retrô Gastronômica Moderna
    ========================================================================== */
 
-/* --- 1. Variáveis Globais e Reset --- */
+/* --- 1. Paleta Oficial e Variáveis Globais --- */
 :root {
-  --hero: #FFC93C;
-  --hero-light: #FFE382;
-  --ink: #2B1A12;
-  --red: #D7263D;
-  --red-hover: #b81d30;
-  --bg: #FDFBF7;
-  --card-bg: #FFFFFF;
-  --soft: #FFF4D0;
-  --muted: #665042;
-  --foot-bg: #1E120C;
-  --foot-fg: #FFD866;
-  --whats: #25D366;
-  --whats-hover: #20BA5A;
-  --gold: #FFB300;
-  
-  --display: "Bowlby One", "Arial Black", Impact, sans-serif;
-  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
-  
-  --shadow-retro: 4px 4px 0 var(--ink);
-  --shadow-retro-sm: 2px 2px 0 var(--ink);
-  --shadow-retro-hover: 6px 6px 0 var(--ink);
-  --radius-card: 16px;
+  /* Cores Oficiais */
+  --bg-main: #F7F2E8;         /* Fundo principal: Creme quente (60%) */
+  --bg-surface: #FFFDF8;      /* Superfície: Branco creme (25%) */
+  --primary: #7A1820;         /* Vinho principal da marca */
+  --primary-dark: #521016;    /* Vinho escuro (footer, contraste forte) */
+  --accent: #D99A2B;          /* Dourado mostarda (preços, ornamentos com moderação) */
+  --secondary: #3F6B69;       /* Verde-petróleo (cor complementar discreta) */
+  --text-main: #241814;       /* Marrom escuro (textos principais - 10%) */
+  --text-secondary: #786B60;  /* Marrom cinza (descrições e apoios) */
+  --border: #E7D7C7;          /* Bege (bordas e divisórias) */
+  --border-subtle: #F0E5D8;
+
+  /* Tipografia */
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-body: "Figtree", system-ui, -apple-system, sans-serif;
+
+  /* Espaçamentos e Raios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-pill: 999px;
+
+  /* Sombras Suaves */
+  --shadow-subtle: 0 2px 8px rgba(36, 24, 20, 0.04);
+  --shadow-card: 0 4px 16px rgba(36, 24, 20, 0.05);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --hero: #1E120C;
-    --hero-light: #2B1A12;
-    --ink: #FFD866;
-    --red: #FF4D5E;
-    --red-hover: #e6394a;
-    --bg: #120A07;
-    --card-bg: #1C120C;
-    --soft: #26160F;
-    --muted: #CDB89F;
-    --foot-bg: #0A0503;
-    --foot-fg: #FFD866;
-    --shadow-retro: 4px 4px 0 rgba(0, 0, 0, 0.6);
-    --shadow-retro-sm: 2px 2px 0 rgba(0, 0, 0, 0.6);
-    --shadow-retro-hover: 6px 6px 0 rgba(0, 0, 0, 0.7);
-  }
-}
-
-:root[data-theme="dark"] {
-  --hero: #1E120C;
-  --hero-light: #2B1A12;
-  --ink: #FFD866;
-  --red: #FF4D5E;
-  --red-hover: #e6394a;
-  --bg: #120A07;
-  --card-bg: #1C120C;
-  --soft: #26160F;
-  --muted: #CDB89F;
-  --foot-bg: #0A0503;
-  --foot-fg: #FFD866;
-  --shadow-retro: 4px 4px 0 rgba(0, 0, 0, 0.6);
-  --shadow-retro-sm: 2px 2px 0 rgba(0, 0, 0, 0.6);
-  --shadow-retro-hover: 6px 6px 0 rgba(0, 0, 0, 0.7);
-}
-
+/* --- 2. Reset e Base --- */
 *,
 *::before,
 *::after {
@@ -75,24 +42,16 @@
 }
 
 html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 4.5rem;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--body);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-body);
   font-size: 1rem;
-  line-height: 1.55;
-  overflow-x: hidden;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -100,245 +59,111 @@ a {
   text-decoration: none;
 }
 
-:focus-visible {
-  outline: 3px solid var(--red);
-  outline-offset: 3px;
-}
-
-/* Container Responsivo */
+/* Container Responsivo Centralizado */
 .wrap {
   width: 100%;
-  max-width: 1040px;
+  max-width: 860px; /* Largura focada para leitura confortável de cardápio */
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 1.25rem;
 }
 
-/* --- 2. Tipografia & Tags --- */
-h1, h2, h3 {
-  font-family: var(--display);
-  font-weight: 400;
-  line-height: 1.1;
-  color: var(--ink);
-  letter-spacing: -0.01em;
-}
-
-h1 {
-  font-size: clamp(2rem, 7vw, 3.4rem);
-}
-
-h2 {
-  font-size: clamp(1.75rem, 5.5vw, 2.6rem);
-}
-
-h3 {
-  font-size: 1.25rem;
-}
-
-.lead {
-  font-size: 1rem;
-  color: var(--muted);
-  margin-top: 0.4rem;
-  max-width: 52ch;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.sub-badge {
-  display: inline-block;
-  font-family: var(--display);
-  font-size: 0.8rem;
-  color: var(--red);
-  letter-spacing: 0.05em;
-  margin-bottom: 0.35rem;
-}
-
-.tag-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--body);
-  font-weight: 700;
-  font-size: 0.85rem;
-  background: var(--ink);
-  color: var(--hero);
-  padding: 0.35rem 0.9rem;
-  border-radius: var(--radius-pill);
-  margin-bottom: 0.85rem;
-}
-
-/* --- 3. Botões (Mobile-First 48px Touch Friendly) --- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-family: var(--display);
-  font-size: 1rem;
-  text-align: center;
-  padding: 0.9rem 1.4rem;
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-retro);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 48px;
-  width: 100%;
-}
-
-.btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: var(--shadow-retro-sm);
-}
-
-@media (hover: hover) {
-  .btn:hover {
-    transform: translate(2px, 2px);
-    box-shadow: var(--shadow-retro-sm);
+@media (max-width: 480px) {
+  .wrap {
+    padding: 0 1rem;
   }
 }
 
-.btn-red {
-  background: var(--red);
-  color: #FFFFFF;
-}
-
-.btn-red:hover {
-  background: var(--red-hover);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--ink);
-}
-
-.btn-ghost:hover {
-  background: rgba(43, 26, 18, 0.08);
-}
-
-/* --- 4. Topo & Hero --- */
-.hero {
-  background: var(--hero);
-  border-bottom: 4px solid var(--ink);
-  padding-bottom: 2rem;
-}
-
-.topbar {
+/* --- 3. Header --- */
+.site-header {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
   padding: 0.85rem 0;
-  border-bottom: 2px dashed rgba(43, 26, 18, 0.25);
 }
 
-.topbar-wrap {
+.header-wrap {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.brand-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background-color: #FFFFFF;
+}
+
+@media (max-width: 480px) {
+  .brand-logo {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
 }
 
 .brand-name {
-  font-family: var(--display);
-  font-size: 1.15rem;
-  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--primary);
+  line-height: 1.1;
   letter-spacing: 0.02em;
 }
 
-.topbar-links {
-  display: flex;
-  gap: 0.75rem;
+.brand-tagline {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 2px;
 }
 
-.nav-link {
-  font-family: var(--body);
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--ink);
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  transition: background 0.15s;
-}
-
-.nav-link:hover {
-  background: rgba(43, 26, 18, 0.1);
-}
-
-/* Conteúdo do Hero com a Logo no Topo */
-.hero-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding-top: 1.5rem;
+/* Navegação do Header (Desktop) */
+.header-nav {
+  display: none;
   gap: 1.25rem;
 }
 
-.hero-logo-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.logo-topo {
-  width: clamp(170px, 52vw, 250px);
-  height: auto;
-  border-radius: 16px;
-  background: #FFFFFF;
-  border: 3px solid var(--ink);
-  box-shadow: var(--shadow-retro);
-  padding: 6px;
-  animation: logoSurge 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) both;
-}
-
-@keyframes logoSurge {
-  from {
-    opacity: 0;
-    transform: scale(0.85) translateY(-15px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+@media (min-width: 768px) {
+  .header-nav {
+    display: flex;
   }
 }
 
-.hero-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 580px;
+.nav-link {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
 }
 
-.hero-content p {
-  font-size: 1.05rem;
-  margin: 0.85rem 0 1.5rem;
-  color: var(--muted);
-  max-width: 44ch;
+.nav-link:hover {
+  color: var(--primary);
 }
 
-.cta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 380px;
-}
-
-.icon-whatsapp {
-  flex-shrink: 0;
-}
-
-/* --- 5. Barra de Categorias Rápida (Sticky Mobile) --- */
-.category-nav {
+/* --- 4. Barra de Categorias Rápida (Sticky) --- */
+.category-bar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--ink);
-  border-bottom: 3px solid var(--red);
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-subtle);
   padding: 0.65rem 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.category-wrap {
+.category-bar-wrap {
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
@@ -346,504 +171,445 @@ h3 {
   -webkit-overflow-scrolling: touch;
 }
 
-.category-wrap::-webkit-scrollbar {
+.category-bar-wrap::-webkit-scrollbar {
   display: none;
 }
 
-.cat-pill {
+.cat-tab {
   flex-shrink: 0;
   padding: 0.45rem 1rem;
   border-radius: var(--radius-pill);
-  font-family: var(--body);
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  background-color: transparent;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
-.cat-pill:hover,
-.cat-pill.active {
-  background: var(--hero);
-  color: var(--ink);
-  border-color: var(--hero);
+.cat-tab:hover {
+  color: var(--primary-dark);
+  background-color: var(--bg-main);
 }
 
-/* --- 6. Seções Comuns --- */
-.section-cardapio,
-.section-porcoes,
-.section-bebidas,
-.section-diferenciais {
-  padding: 3rem 0;
+.cat-tab.active {
+  background-color: var(--primary);
+  color: var(--bg-surface);
+  border-color: var(--primary);
 }
 
-.section-header {
-  margin-bottom: 1.75rem;
+/* --- 5. Seção de Apresentação (Curta e Elegante) --- */
+.intro-section {
+  padding: 2.5rem 0 1.5rem;
+  text-align: center;
 }
 
-/* --- 7. Grid e Cards dos Lanches --- */
-.menu-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+.intro-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 1.25rem;
 }
 
-.menu-card {
-  background: var(--card-bg);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-retro);
-  padding: 1.25rem;
+.intro-logo-box {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 0.75rem;
-  position: relative;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-@media (hover: hover) {
-  .menu-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-retro-hover);
-  }
-}
-
-.highlight-card {
-  border-color: var(--ink);
-  background: linear-gradient(to bottom, #FFFAEA, var(--card-bg));
-}
-
-.card-topo {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.card-selo {
-  display: inline-block;
-  font-family: var(--body);
-  font-weight: 800;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--red);
-  background: var(--soft);
-  padding: 0.2rem 0.6rem;
-  border-radius: var(--radius-pill);
-  margin-bottom: 0.25rem;
-  border: 1px solid rgba(43, 26, 18, 0.15);
-}
-
-.card-nome {
-  font-size: 1.3rem;
-  color: var(--ink);
-}
-
-.price-tag {
-  font-family: var(--display);
-  font-size: 1.15rem;
-  color: #FFFFFF;
-  background: var(--red);
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--radius-pill);
-  border: 2px solid var(--ink);
-  white-space: nowrap;
-  flex-shrink: 0;
-  box-shadow: 2px 2px 0 var(--ink);
-}
-
-.card-desc {
-  font-size: 0.95rem;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.card-action {
-  margin-top: 0.25rem;
-}
-
-.btn-item-whats {
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
-  width: 100%;
-  padding: 0.65rem 1rem;
-  font-family: var(--body);
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--ink);
-  background: var(--soft);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-pill);
-  transition: background 0.15s, transform 0.15s;
 }
 
-.btn-item-whats:hover {
-  background: var(--hero);
+.intro-logo {
+  width: 110px;
+  height: 110px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background-color: #FFFFFF;
+  box-shadow: var(--shadow-subtle);
+  padding: 4px;
 }
 
-/* Card Especial PCQ Kids (Combo Kids) */
-.kids-card {
-  border-color: var(--red);
-  border-width: 3px;
-  background: linear-gradient(to bottom, #FFF3F4, var(--card-bg));
-}
-
-.combo-kids-badge {
-  background: var(--red);
-  color: #FFFFFF;
-}
-
-.destaque-kids-box {
-  background: var(--hero);
-  color: var(--ink);
-  padding: 0.6rem 0.85rem;
-  border-radius: 10px;
-  border: 2px dashed var(--ink);
-  font-size: 0.9rem;
-}
-
-/* --- 8. Seção Porção (Batata Frita) --- */
-.section-porcoes {
-  background: var(--soft);
-  border-block: 4px solid var(--ink);
-}
-
-.porcao-card {
-  background: var(--card-bg);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-retro);
-  padding: 1.5rem;
-}
-
-.porcao-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.porcao-badge {
+.vintage-stamp {
   display: inline-block;
-  font-family: var(--display);
-  font-size: 0.8rem;
-  color: var(--red);
-  margin-bottom: 0.25rem;
-}
-
-.porcao-titulo {
-  font-size: 1.4rem;
-}
-
-.porcao-preco-tag {
-  font-family: var(--display);
-  font-size: 1.25rem;
-  color: #FFFFFF;
-  background: var(--red);
-  padding: 0.4rem 0.9rem;
-  border-radius: var(--radius-pill);
-  border: 2px solid var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
-  white-space: nowrap;
-}
-
-.porcao-destaque {
-  font-family: var(--display);
-  color: var(--red);
-  font-size: 1.05rem;
-  margin: 0.35rem 0 0.5rem;
-}
-
-.porcao-desc {
-  color: var(--muted);
-  font-size: 0.95rem;
-  margin-bottom: 1.25rem;
-}
-
-.btn-porcao {
-  width: 100%;
-}
-
-/* --- 9. Seção Bebidas --- */
-.bebidas-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.85rem;
-}
-
-.bebida-card {
-  background: var(--card-bg);
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  box-shadow: var(--shadow-retro-sm);
-  padding: 0.85rem 1.15rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  transition: transform 0.15s;
-}
-
-.bebida-card:hover {
-  transform: translateY(-2px);
-}
-
-.bebida-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.bebida-info {
-  flex: 1;
-}
-
-.bebida-nome {
-  font-size: 1.05rem;
-  color: var(--ink);
-}
-
-.bebida-vol {
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.bebida-preco {
-  font-family: var(--display);
-  font-size: 1.1rem;
-  color: var(--red);
-  background: var(--soft);
-  padding: 0.25rem 0.65rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--ink);
-}
-
-/* --- 10. Seção Diferenciais --- */
-.section-diferenciais {
-  background: var(--ink);
-  color: #FFFFFF;
-}
-
-.section-diferenciais h2 {
-  color: var(--hero);
-}
-
-.section-diferenciais .sub-badge {
-  color: var(--hero);
-}
-
-.diferenciais-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.dif-card {
-  background: rgba(255, 255, 255, 0.06);
-  border: 2px solid rgba(255, 201, 60, 0.35);
-  border-radius: 14px;
-  padding: 1.25rem;
-  text-align: center;
-}
-
-.dif-icon {
-  font-size: 2rem;
-  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.08em;
   margin-bottom: 0.5rem;
 }
 
-.dif-card strong {
-  font-family: var(--display);
-  font-size: 1.1rem;
-  color: var(--hero);
-  display: block;
-  margin-bottom: 0.3rem;
-}
-
-.dif-card p {
-  font-size: 0.9rem;
-  color: #d8cec5;
-}
-
-/* --- 11. Banner CTA Final --- */
-.banner-cta {
-  background: var(--red);
-  color: #FFFFFF;
-  padding: 3rem 0;
-  text-align: center;
-  border-bottom: 4px solid var(--ink);
-}
-
-.banner-wrap h2 {
-  color: #FFFFFF;
+.intro-headline {
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 5vw, 2.5rem);
+  color: var(--text-main);
+  line-height: 1.2;
   margin-bottom: 0.5rem;
 }
 
-.banner-wrap p {
+.intro-subtext {
   font-size: 1.05rem;
-  max-width: 44ch;
-  margin: 0 auto 1.5rem;
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.btn-banner {
-  background: var(--hero);
-  color: var(--ink);
-  max-width: 380px;
-  margin: 0 auto;
-}
-
-.btn-banner:hover {
-  background: #FFFFFF;
-}
-
-/* --- 12. Rodapé --- */
-.rodape {
-  background: var(--foot-bg);
-  color: var(--foot-fg);
-  padding: 2.5rem 0 5.5rem;
-  font-size: 0.95rem;
-}
-
-.rodape-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.rodape-col strong {
-  font-family: var(--display);
-  font-size: 1.2rem;
-  display: block;
-  margin-bottom: 0.35rem;
-  color: #FFFFFF;
-}
-
-.rodape-col p {
-  color: #d1c7bd;
+  color: var(--text-secondary);
+  max-width: 48ch;
+  margin: 0 auto 1.25rem;
   line-height: 1.5;
 }
 
-.rodape-link-whats {
-  display: inline-block;
-  margin-top: 0.4rem;
-  color: var(--hero);
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
-.rodape-bottom {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  text-align: center;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-/* --- 13. Botão Flutuante do WhatsApp --- */
-.whatsapp-float {
-  position: fixed;
-  bottom: 1.25rem;
-  right: 1.25rem;
-  z-index: 999;
-  background-color: var(--whats);
-  color: #FFFFFF;
-  display: flex;
+.waiter-notice {
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.15rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 0.5rem 1.15rem;
   border-radius: var(--radius-pill);
-  border: 3px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
-  text-decoration: none;
-  font-family: var(--display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  box-shadow: var(--shadow-subtle);
+}
+
+.notice-icon {
+  font-size: 1rem;
+}
+
+/* --- 6. Estrutura do Cardápio --- */
+.menu-container {
+  padding: 1.5rem 0 3.5rem;
+}
+
+.menu-section {
+  padding-top: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Cabeçalho de Categoria com Detalhe Vintage */
+.section-title-box {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.ornament-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--accent);
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.ornament-line::before,
+.ornament-line::after {
+  content: "";
+  display: inline-block;
+  width: 40px;
+  height: 1px;
+  background-color: var(--border);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 4vw, 2.3rem);
+  color: var(--primary);
+  line-height: 1.15;
+}
+
+.section-desc {
   font-size: 0.95rem;
-  transition: transform 0.2s ease, background-color 0.2s ease;
-  -webkit-tap-highlight-color: transparent;
-  animation: pulseFloat 2.5s infinite ease-in-out;
+  color: var(--text-secondary);
+  margin-top: 0.35rem;
+  max-width: 50ch;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.whatsapp-float:active {
-  transform: scale(0.95);
+/* Lista de Itens do Cardápio (Estilo Restaurante) */
+.menu-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-@keyframes pulseFloat {
-  0%, 100% {
-    transform: translateY(0);
+.menu-item {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.35rem 1.5rem;
+  box-shadow: var(--shadow-subtle);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-item:hover {
+  border-color: #D6C2AF;
+  box-shadow: var(--shadow-card);
+}
+
+/* Linha do Topo do Item: Nome + Pontilhado + Preço */
+.item-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.item-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.item-name {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+/* Linha Pontilhada Discreta que Conecta ao Preço */
+.item-dots {
+  flex: 1;
+  border-bottom: 1px dotted var(--border);
+  opacity: 0.8;
+  min-width: 20px;
+  transform: translateY(-4px);
+}
+
+@media (max-width: 520px) {
+  .item-dots {
+    display: none; /* No mobile estreito, preço e nome fluem naturalmente */
   }
-  50% {
-    transform: translateY(-4px);
+  .item-header {
+    flex-wrap: wrap;
   }
 }
 
-/* ==========================================================================
-   BREAKPOINTS: Tablets e Desktops (Progressive Enhancement)
-   ========================================================================== */
+/* Preço com Destaque em Vinho/Dourado */
+.item-price {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--primary);
+  white-space: nowrap;
+}
 
-/* Tablets (a partir de 640px) */
+/* Descrição dos Ingredientes */
+.item-description {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* Badges Discretos */
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+}
+
+.badge-petroleo {
+  background-color: var(--secondary);
+  color: #FFFDF8;
+}
+
+.badge-vinho {
+  background-color: var(--primary);
+  color: #FFFDF8;
+}
+
+.badge-dourado {
+  background-color: var(--accent);
+  color: var(--text-main);
+}
+
+/* Card Especial Combo */
+.combo-item {
+  border-left: 4px solid var(--accent);
+}
+
+.item-extra-info {
+  background-color: var(--bg-main);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-main);
+}
+
+.extra-highlight {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Grid para Bebidas */
+.menu-items-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 600px) {
+  .menu-items-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.drink-item {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1.25rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.drink-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.drink-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--text-main);
+}
+
+.drink-price {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.drink-detail {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* --- 7. Seção Informações da Casa --- */
+.info-section {
+  padding-top: 3.5rem;
+}
+
+.info-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem 1.75rem;
+  box-shadow: var(--shadow-subtle);
+  text-align: center;
+}
+
+.info-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  color: var(--primary);
+  margin-bottom: 0.35rem;
+}
+
+.info-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  text-align: left;
+}
+
 @media (min-width: 640px) {
-  .wrap {
-    padding: 0 1.5rem;
-  }
-
-  .cta {
-    flex-direction: row;
-    width: auto;
-  }
-
-  .btn {
-    width: auto;
-  }
-
-  .menu-grid {
+  .info-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-  }
-
-  .bebidas-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-
-  .diferenciais-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .rodape-wrap {
-    flex-direction: row;
-    justify-content: space-between;
   }
 }
 
-/* Desktops e Telas Maiores (a partir de 900px) */
-@media (min-width: 900px) {
-  .hero-wrap {
-    flex-direction: row-reverse;
-    justify-content: space-between;
-    text-align: left;
-    padding-top: 2.5rem;
-    padding-bottom: 1.5rem;
-    gap: 3rem;
-  }
+.info-card {
+  padding: 1rem;
+  background-color: var(--bg-main);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
 
-  .hero-content {
-    align-items: flex-start;
-  }
+.info-icon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.4rem;
+}
 
-  .logo-topo {
-    width: 280px;
-  }
+.info-card h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
 
-  .bebidas-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.info-card p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
 
-  .diferenciais-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
+/* --- 8. Footer --- */
+.site-footer {
+  background-color: var(--primary-dark);
+  color: #F7EBE1;
+  padding: 3rem 0 2.5rem;
+  margin-top: 2rem;
+  border-top: 2px solid var(--accent);
+}
+
+.footer-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.footer-name {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: #FFFDF8;
+  letter-spacing: 0.04em;
+  display: block;
+}
+
+.footer-motto {
+  font-size: 0.9rem;
+  color: #D6C2AF;
+  margin-top: 0.25rem;
+}
+
+.footer-callout {
+  margin: 0.5rem 0;
+}
+
+.callout-pill {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.6rem 1.4rem;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #FFFDF8;
+}
+
+.footer-meta {
+  font-size: 0.85rem;
+  color: #BAA694;
+  line-height: 1.6;
+}
+
+.footer-copy {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  opacity: 0.75;
 }
