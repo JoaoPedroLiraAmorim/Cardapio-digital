@@ -25,7 +25,7 @@ test('mensagem inclui itens, observações, endereço, pagamento e total correto
   assert.ok(!message.includes('Observação antiga da bebida'));
   for (const expected of ['2 × Burg da casa', 'Um sem cebola', 'Rua de teste, 123', 'Bairro: Centro', 'Complemento/referência: Casa', 'Pagamento: Dinheiro', 'Troco para:', 'Tocar campainha']) assert.ok(message.includes(expected));
   assert.ok(message.includes(`Total: ${order.money(6198)}`));
-  assert.equal(order.config.whatsapp, '5512981440776');
+  assert.equal(order.config.whatsapp, '5512983157450');
   assert.equal(new URL(`https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(message)}`).searchParams.get('text'), message);
 });
 test('todos os pagamentos e retirada sem endereço ou troco indevido', () => {
