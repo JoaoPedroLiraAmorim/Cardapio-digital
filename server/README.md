@@ -4,13 +4,15 @@ Este código prepara pagamentos Pix no Mercado Pago e confirma o resultado consu
 
 ## Configuração antes de ativar
 
+Para homologação, usar `wrangler.hml.example.jsonc` e o procedimento de `../HML.md`. O preflight `node server/preflight.mjs --template` verifica o modelo local sem consultar APIs. Já há relato posterior do ambiente Cloud de Worker/D1 HML criados: conferir os recursos existentes antes de provisionar novos. As etapas abaixo são requisitos gerais; não indicam que esses recursos ainda precisam ser criados.
+
 1. O titular cria uma aplicação Mercado Pago, habilita Pix e obtém as credenciais e o segredo de assinatura do webhook no painel oficial. O ID da conta recebedora é configurado em `MP_COLLECTOR_ID`. Nunca colocar o token no HTML, Git, WhatsApp ou chat.
 2. Criar Worker e D1 na conta Cloudflare. Copiar `wrangler.example.jsonc` para um arquivo de configuração local e preencher ID do banco e domínio público HTTPS, sem barra final. Aplicar `schema.sql` ao D1. A publicação e a criação desses recursos exigem autorização e login do titular.
 3. Configurar os secrets `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e `RATE_LIMIT_SECRET` pelo painel oficial ou comando de secrets do Wrangler. `RATE_LIMIT_SECRET` deve ser aleatório, com pelo menos 32 bytes. `MP_COLLECTOR_ID` é variável de configuração, não segredo.
-4. Registrar notificações de pagamento no Mercado Pago, apontando para `https://SEU-WORKER/api/webhooks/mercado-pago`. Validar a assinatura em ambiente de teste antes de ativar. O código também informa essa URL ao criar cada pagamento.
+4. Registrar o webhook **Order (Mercado Pago)** no painel, apontando para `https://SEU-WORKER/api/webhooks/mercado-pago`. A Orders API não recebe `notification_url` no payload. Cadastrar a assinatura gerada como `MP_WEBHOOK_SECRET` e validá-la no ambiente correspondente antes de ativar.
 5. Restringir `ALLOWED_ORIGINS` aos dois domínios Firebase efetivamente utilizados. Localhost só deve entrar numa configuração separada de desenvolvimento. Configurar o frontend com a URL desse servidor. Só habilitar `PIX_ENABLED=true` depois dos testes da conta e do fluxo completo.
 
-O Wrangler deve ser instalado em uma versão compatível e fixada no momento de configurar/publicar. Não foi adicionado como dependência do site: nenhum CLI ou login é necessário para executar os testes locais abaixo. O arquivo exemplo se chama `wrangler.example.jsonc` justamente para impedir publicação acidental com dados incompletos.
+O Wrangler deve ser instalado em uma versão compatível e fixada no momento de configurar/publicar. Não foi adicionado como dependência do site: nenhum CLI ou login é necessário para executar os testes locais abaixo. Os arquivos `wrangler.example.jsonc` e `wrangler.hml.example.jsonc` são modelos, sem IDs reais de D1 ou credenciais. Preflight verifica apenas dados locais e não confirma secrets já armazenados no Worker.
 
 ## Contrato HTTP
 
@@ -40,7 +42,7 @@ Estados: `creating` (HTTP 202, repetir mesma tentativa), `pending`, `approved`, 
 
 ## Confirmação, recuperação e segurança
 
-O webhook exige assinatura válida e, mesmo assim, consulta o pagamento oficial. Confere ID, referência do pedido, conta recebedora, moeda, método e valor em centavos. Notificações repetidas são idempotentes; uma notificação antiga não rebaixa um pagamento aprovado para pendente. Estorno e chargeback continuam sendo registrados. Não existe endpoint de "já paguei".
+O webhook exige assinatura válida e, mesmo assim, consulta a order oficial em `GET /v1/orders/{id}`. Confere ID, referência do pedido, conta recebedora, moeda, método e valor em centavos. Notificações repetidas são idempotentes; uma notificação antiga não rebaixa um pagamento aprovado para pendente. Estorno e chargeback continuam sendo registrados. Não existe endpoint de "já paguei".
 
 O D1 registra a tentativa antes da chamada ao Mercado Pago, com chave única e claim atômico. Retries reutilizam a chave original no provedor. Uma criação incerta é repetida por até 23 horas; depois desse prazo exige conferência do titular no Mercado Pago, sem gerar outra cobrança automaticamente. Essa janela conservadora deve ser conferida com a política de idempotência vigente do provedor antes de ativar.
 

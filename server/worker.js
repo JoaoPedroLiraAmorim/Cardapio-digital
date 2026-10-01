@@ -75,7 +75,7 @@ export function matchesPayment(row, payment, env) {
 }
 async function applyPayment(env, row, payment, now) {
   if (!matchesPayment(row, payment, env)) fail(502, 'Pagamento não corresponde ao pedido.');
-  if (!['pending', 'approved', 'rejected', 'cancelled', 'refunded', 'charged_back'].includes(payment.status)) fail(502, 'Estado de pagamento desconhecido.');
+  if (!['creating', 'pending', 'approved', 'rejected', 'cancelled', 'refunded', 'charged_back'].includes(payment.status)) fail(502, 'Estado de pagamento desconhecido.');
   const status = payment.status === 'pending' && payment.expiresAt && Date.parse(payment.expiresAt) <= now ? 'expired' : payment.status;
   // Expiration never regresses to pending; verified late approvals and reversals still advance.
   await query(env, `UPDATE orders SET payment_id=?, status=CASE WHEN status='expired' AND ?='pending' THEN 'expired' ELSE ? END,
@@ -99,7 +99,8 @@ async function ensurePayment(env, row, provider, now) {
     const payment = await provider.createPix({accessToken: env.MP_ACCESS_TOKEN, idempotencyKey: row.idempotency_key, amountCents: row.amount_cents,
       orderId: row.id, payerEmail: payload.payerEmail, notificationUrl: `${env.PUBLIC_API_URL}/api/webhooks/mercado-pago`});
     return await applyPayment(env, row, payment, Date.now());
-  } catch {
+  } catch (error) {
+    console.error('Pix creation failed', { name: error?.name, code: error?.code, status: error?.status });
     // A timeout can happen after MP accepted the charge. Always reuse the same durable key.
     await query(env, "UPDATE orders SET lease_until=0, updated_at=? WHERE id=? AND status='creating'", now, row.id).run();
     fail(503, 'Não foi possível confirmar a criação do Pix. Repita com a mesma chave.');
@@ -140,7 +141,7 @@ export function createWorker(provider = mercadoPago) {
         if (webhook && request.method === 'POST') {
           const body = await readBody(request);
           const dataId = url.searchParams.get('data.id');
-          if (!dataId || !/^\d{1,30}$/.test(dataId) || String(body.data?.id) !== dataId || body.type !== 'payment') fail(400, 'Notificação inválida.');
+          if (!dataId || !/^[A-Za-z0-9_-]{1,128}$/.test(dataId) || String(body.data?.id) !== dataId || body.type !== 'order') fail(400, 'Notificação inválida.');
           const valid = await provider.verifyWebhook({secret: env.MP_WEBHOOK_SECRET, signature: request.headers.get('x-signature'), requestId: request.headers.get('x-request-id'), dataId, now});
           if (!valid) fail(401, 'Assinatura inválida.');
           const payment = await provider.getPayment({accessToken: env.MP_ACCESS_TOKEN, paymentId: dataId});

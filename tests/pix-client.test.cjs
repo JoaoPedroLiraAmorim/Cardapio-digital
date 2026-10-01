@@ -8,8 +8,10 @@ const details = { fulfillment: 'delivery', customer: 'Cliente', address: 'Rua 12
 const payment = (changes = {}) => ({ id: 'order-1', status: 'pending', amountCents: 3300, subtotalCents: 3000, deliveryCents: 300, fulfillment: 'delivery', items: [{ id: 'item-1', name: 'Hambúrguer', quantity: 1, notes: '', priceCents: 3000 }], qrCode: '000201PIX', qrCodeBase64: 'iVBORw0KGgo=', expiresAt: '2026-10-01T12:00:00Z', ...changes });
 const response = data => new Response(JSON.stringify(data));
 
-test('opt-in exige HTTPS origem limpa e permanece desativado por padrão', () => {
-  assert.equal(baseUrl(orderRules.config.pix), null);
+test('opt-in exige HTTPS origem limpa e respeita configuração desativada', () => {
+  // A HML pode ficar ativada para o teste manual; a proteção de opt-in
+  // continua sendo verificada com uma configuração explicitamente desligada.
+  assert.equal(baseUrl({ enabled: false, apiBaseUrl: config.apiBaseUrl }), null);
   for (const apiBaseUrl of ['http://worker.example', 'https://u:p@worker.example', 'https://worker.example/?token=x', 'https://worker.example/#secret', 'https://worker.example/path']) assert.equal(baseUrl({ enabled: true, apiBaseUrl }), null);
   assert.equal(baseUrl(config), 'https://worker.example');
 });

@@ -1,0 +1,20 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "jg-cardapio-api-hml",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "vars": {
+    "ENVIRONMENT": "hml",
+    "PIX_ENABLED": "false",
+    "ALLOWED_ORIGINS": "https://hml-jg-hamburgueria.web.app,https://hml-jg-hamburgueria.firebaseapp.com",
+    "PUBLIC_API_URL": "https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev",
+    "MP_COLLECTOR_ID": "SUBSTITUIR",
+    "MAX_DAILY_ORDERS": "50"
+  },
+  "d1_databases": [
+    {"binding": "DB", "database_name": "jg-cardapio-hml", "database_id": "SUBSTITUIR-HML"}
+  ],
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "observability": {"enabled": false}
+}

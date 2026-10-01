@@ -33,7 +33,7 @@ function fixture(overrides = {}) {
   const key = crypto.randomUUID();
   const post = (body=order(), headers={}) => worker.fetch(new Request(env.PUBLIC_API_URL+'/api/orders', {method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Authorization:`Bearer ${token}`,'Idempotency-Key':key,...headers},body:JSON.stringify(body)}),env);
   const get = (id, secret=token) => worker.fetch(new Request(env.PUBLIC_API_URL+'/api/orders/'+id,{headers:{Origin:origin,Authorization:`Bearer ${secret}`}}),env);
-  const webhook = (signature='valid') => worker.fetch(new Request(env.PUBLIC_API_URL+'/api/webhooks/mercado-pago?data.id=10001',{method:'POST',headers:{'Content-Type':'application/json','x-signature':signature,'x-request-id':'request'},body:JSON.stringify({type:'payment',data:{id:'10001'}})}),env);
+  const webhook = (signature='valid') => worker.fetch(new Request(env.PUBLIC_API_URL+'/api/webhooks/mercado-pago?data.id=10001',{method:'POST',headers:{'Content-Type':'application/json','x-signature':signature,'x-request-id':'request'},body:JSON.stringify({type:'order',data:{id:'10001'}})}),env);
   return {env,worker,post,get,webhook,payments,key,provider,calls:()=>calls,reads:()=>reads};
 }
 test('server catalog controls price, delivery and beverage notes', () => {

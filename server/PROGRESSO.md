@@ -48,3 +48,16 @@ Não há painel administrativo, gestão de estoque, envio automático de WhatsAp
 ## Persistência desta sessão
 
 Alterações publicadas na branch remota `codex/servidor-pix-cloudflare` em 30/09/2026. O envio foi feito pela integração GitHub após a renovação das permissões, e a árvore publicada foi comparada com o checkout local. A `main` permaneceu inalterada.
+
+## Preparação local da HML — sessão Windows de 30/09/2026
+
+Trabalho desta etapa somente em `.worktrees/hml`, branch `hml`, a partir da HML remota atualizada. As implementações de provider, Worker, frontend e schema existentes foram preservadas. Nenhum login, recurso, pagamento, commit ou deploy foi realizado nesta etapa local.
+
+- Criado `server/wrangler.hml.example.jsonc`: nomes `jg-cardapio-api-hml` / `jg-cardapio-hml`, URL do Worker conforme relato Cloud, IDs pendentes, origem HML a confirmar e Pix desligado.
+- Criado `server/preflight.mjs`: leitura local de configuração JSONC, variáveis/secrets, isolamento HML/produção, HTTPS/CORS, IDs e cron; não imprime valores sensíveis nem chama rede.
+- Criado `tests/preflight.test.mjs`: quatro testes de modelo incompleto, configuração local preenchida, rejeição de produção/URL insegura/ativação e leitura de JSONC/secrets sem execução de conteúdo.
+- Atualizados HML.md e README com procedimento e distinção entre relatos remotos e validação local. Relato Cloud posterior informa Worker/D1 já criados: verificar existentes antes de qualquer criação.
+
+Verificação efetivamente executada: `node --test --test-isolation=none tests/preflight.test.mjs`: **4 passaram, 0 falharam**. `node server/preflight.mjs --template`: modelo aprovado, seis pendências locais enumeradas, Pix permanece desligado. Wrangler ausente neste ambiente; nenhum teste de runtime Wrangler ou pagamento real alegado. A versão final de documentos pode ser complementada pelo root conforme confirmar o contexto Cloud.
+
+Próximos passos: confirmar estado/identificadores dos recursos HML já relatados, origem estável Firebase HML, ID recebedor de teste e disponibilidade de secrets no painel; preencher configuração ignorada pelo Git, executar preflight estrito e validar runtime/conta antes de ativar. Nenhum segredo deve ir no Git ou chat.

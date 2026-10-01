@@ -40,7 +40,7 @@ function fixture({ loseClientResponse = false, loseProviderResponse = false, col
     MP_WEBHOOK_SECRET: 'test-only-webhook', RATE_LIMIT_SECRET: 'test-only-rate-limit',
     MP_COLLECTOR_ID: '123', PUBLIC_API_URL: api, ALLOWED_ORIGINS: origin,
   };
-  const payments = new Map();
+  const orders = new Map();
   const requests = [];
   let creates = 0;
   const gateway = async (url, options) => {
@@ -50,18 +50,17 @@ function fixture({ loseClientResponse = false, loseProviderResponse = false, col
       creates++;
       const body = JSON.parse(options.body);
       const key = options.headers['X-Idempotency-Key'];
-      if (!payments.has(key)) payments.set(key, {
-        id: 10001, status: 'pending', transaction_amount: body.transaction_amount,
-        external_reference: body.external_reference, collector_id: collector,
-        currency_id: 'BRL', payment_method_id: 'pix',
-        date_of_expiration: new Date(Date.now() + 3600000).toISOString(),
-        point_of_interaction: { transaction_data: { qr_code: 'test-pix-copia-e-cola', qr_code_base64: png } },
+      if (!orders.has(key)) orders.set(key, {
+        id: 'ORD01TEST10001', status: 'action_required', status_detail: 'waiting_transfer', total_amount: body.total_amount,
+        external_reference: body.external_reference, user_id: collector, currency_id: 'BRL',
+        transactions: { payments: [{ id: 'PAY01TEST10001', status: 'action_required', status_detail: 'waiting_transfer', amount: body.total_amount,
+          payment_method: { id: 'pix', type: 'bank_transfer', qr_code: 'test-pix-copia-e-cola', qr_code_base64: png } }] },
       });
       if (loseProviderResponse) { loseProviderResponse = false; throw new Error('Response lost after charge creation'); }
-      return Response.json(payments.get(key));
+      return Response.json(orders.get(key));
     }
-    assert.equal(url, 'https://api.mercadopago.com/v1/payments/10001');
-    return Response.json([...payments.values()][0]);
+    assert.equal(url, 'https://api.mercadopago.com/v1/orders/ORD01TEST10001');
+    return Response.json([...orders.values()][0]);
   };
   const worker = createWorker({
     createPix: args => mercadoPago.createPix({ ...args, fetchImpl: gateway }),
@@ -82,15 +81,15 @@ function fixture({ loseClientResponse = false, loseProviderResponse = false, col
   const webhook = async (valid = true) => {
     const ts = String(Math.floor(Date.now() / 1000));
     const requestId = 'test-request';
-    const manifest = `id:10001;request-id:${requestId};ts:${ts};`;
+    const manifest = `id:ord01test10001;request-id:${requestId};ts:${ts};`;
     const signature = createHmac('sha256', env.MP_WEBHOOK_SECRET).update(manifest).digest('hex');
-    return worker.fetch(new Request(`${api}/api/webhooks/mercado-pago?data.id=10001`, {
+    return worker.fetch(new Request(`${api}/api/webhooks/mercado-pago?data.id=ORD01TEST10001`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-request-id': requestId,
         'x-signature': `ts=${ts},v1=${valid ? signature : '0'.repeat(64)}` },
-      body: JSON.stringify({ type: 'payment', data: { id: '10001' } }),
+      body: JSON.stringify({ type: 'order', data: { id: 'ORD01TEST10001' } }),
     }), env);
   };
-  return { client, cart, details, env, worker, requests, payments, webhook, creates: () => creates };
+  return { client, cart, details, env, worker, requests, orders, webhook, creates: () => creates };
 }
 
 test('client, Worker and real provider agree on totals, QR, signed approval and WhatsApp', async t => {
@@ -112,7 +111,8 @@ test('client, Worker and real provider agree on totals, QR, signed approval and 
   }), f.env);
   assert.equal(unauthorized.status, 404);
 
-  [...f.payments.values()][0].status = 'approved';
+  [...f.orders.values()][0].status = 'processed';
+  [...f.orders.values()][0].status_detail = 'accredited';
   assert.equal((await f.webhook(false)).status, 401);
   assert.equal((await f.client.refresh()).order.status, 'pending');
   assert.equal((await f.webhook()).status, 200);
@@ -139,7 +139,7 @@ test('lost browser response replays one durable order without creating another c
   const session = await f.client.refresh();
   assert.equal(session.order.status, 'pending');
   assert.equal(f.creates(), 1);
-  assert.equal(f.payments.size, 1);
+  assert.equal(f.orders.size, 1);
   assert.equal(f.requests[0].options.body, f.requests[1].options.body);
   assert.equal(f.requests[1].options.headers['Idempotency-Key'], key);
   assert.equal(f.requests[1].options.headers.Authorization, `Bearer ${token}`);
@@ -151,7 +151,7 @@ test('lost provider response retries the original MP key and recovers the accept
   await assert.rejects(f.client.start(f.cart, f.details));
   assert.equal((await f.client.refresh()).order.status, 'pending');
   assert.equal(f.creates(), 2);
-  assert.equal(f.payments.size, 1);
+  assert.equal(f.orders.size, 1);
   assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM orders').get().count, 1);
 });
 
@@ -159,7 +159,8 @@ test('provider payment for another receiver never reaches approved client state'
   const f = fixture({ collector: 999 });
   t.after(() => f.env.DB.db.close());
   await assert.rejects(f.client.start(f.cart, f.details));
-  [...f.payments.values()][0].status = 'approved';
+  [...f.orders.values()][0].status = 'processed';
+  [...f.orders.values()][0].status_detail = 'accredited';
   assert.equal((await f.webhook()).status, 502);
   assert.equal(f.client.getSession().order, null);
   assert.equal(f.env.DB.db.prepare('SELECT status FROM orders').get().status, 'creating');
