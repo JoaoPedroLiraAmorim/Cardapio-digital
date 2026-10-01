@@ -37,7 +37,7 @@ export function validateOrder(body) {
   return payload;
 }
 export function validatePrintOrder(body) {
-  if (!body || !['pix', 'cash', 'debit', 'credit'].includes(body.payment) || !['delivery', 'pickup'].includes(body.fulfillment) || !Array.isArray(body.items) || !body.items.length || body.items.length > 12) fail(400, 'Pedido inválido.');
+  if (!body || !['cash', 'debit', 'credit'].includes(body.payment) || !['delivery', 'pickup'].includes(body.fulfillment) || !Array.isArray(body.items) || !body.items.length || body.items.length > 12) fail(400, 'Pedido inválido.');
   const seen = new Set(); let quantity = 0;
   const items = body.items.map(item => {
     const product = item && Object.hasOwn(catalog, item.id) && catalog[item.id];
@@ -51,7 +51,7 @@ export function validatePrintOrder(body) {
   const deliveryCents = body.fulfillment === 'delivery' ? deliveryFeeCents : 0;
   const needsChange = body.payment === 'cash' && body.needsChange === true;
   const changeForCents = needsChange ? Number(body.changeForCents) : 0;
-  if (!Number.isInteger(changeForCents) || changeForCents < subtotalCents + deliveryCents || changeForCents > 150000) fail(400, 'Troco inválido.');
+  if (needsChange && (!Number.isInteger(changeForCents) || changeForCents < subtotalCents + deliveryCents || changeForCents > 150000)) fail(400, 'Troco inválido.');
   return {items, payment:body.payment, fulfillment:body.fulfillment, customer:safeText(body.customer,80,true),
     address:safeText(body.address,180,body.fulfillment === 'delivery'), neighborhood:safeText(body.neighborhood,80,body.fulfillment === 'delivery'), reference:safeText(body.reference,180), notes:safeText(body.notes,500), needsChange, changeForCents,
     subtotalCents, deliveryCents, amountCents:subtotalCents + deliveryCents};
@@ -105,8 +105,11 @@ async function enqueuePrint(env, orderId, now) {
     VALUES(?,?,'queued',?,?,?) ON CONFLICT(order_id) DO NOTHING`, crypto.randomUUID(), orderId, now, now, now).run();
 }
 async function handlePrintRoute(request, env, url, headers, now) {
-  if (env.PRINT_SERVICE_ENABLED !== 'true' || !env.DB || !env.PRINT_PAIRING_SECRET || env.PRINT_PAIRING_SECRET.length < 32) fail(503, 'Impressão HML indisponível.');
+  if (env.PRINT_SERVICE_ENABLED !== 'true' || !env.DB) fail(503, 'Impressão HML indisponível.');
   if (url.pathname === '/api/print/pair' && request.method === 'POST') {
+    if (env.PRINT_PAIRING_ENABLED !== 'true') fail(403, 'Pareamento desativado.');
+    if (!env.PRINT_PAIRING_SECRET || env.PRINT_PAIRING_SECRET.length < 32 || !env.RATE_LIMIT_SECRET) fail(503, 'Pareamento indisponível.');
+    await throttle(env, 'print-pair-ip', request.headers.get('CF-Connecting-IP') || 'local', 5, 600, now);
     const {token} = await bearer(request, /^[A-Za-z0-9_-]{32,128}$/);
     if (await sha(token) !== await sha(env.PRINT_PAIRING_SECRET)) fail(401, 'Código de pareamento inválido.');
     const body = await readBody(request); const name = safeText(body.name, 80, true);
@@ -145,7 +148,7 @@ async function handlePrintRoute(request, env, url, headers, now) {
   const retry = url.pathname.match(/^\/api\/print\/jobs\/([0-9a-f-]{36})\/retry$/);
   if (retry && request.method === 'POST') {
     const changed = await query(env, `UPDATE print_jobs SET status='queued',lease_token_hash=NULL,lease_until=0,available_at=?,last_error=NULL,updated_at=?
-      WHERE id=? AND status='uncertain' RETURNING id`, now, now, retry[1]).first();
+      WHERE id=? AND status='uncertain' AND device_id=? RETURNING id`, now, now, retry[1], device.id).first();
     if (!changed) fail(409, 'Impressão não está incerta.');
     return new Response(JSON.stringify({ok:true}), {headers});
   }
@@ -158,8 +161,12 @@ async function submitPrintOrder(request, env, headers, now) {
   const key = request.headers.get('idempotency-key')?.toLowerCase();
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key || '')) fail(400, 'Chave de confirmação inválida.');
   const payload = validatePrintOrder(await readBody(request)); const payloadHash = await sha(JSON.stringify(payload));
-  await query(env, "INSERT INTO orders(id,idempotency_key,token_hash,payload_hash,payload,amount_cents,status,created_at,updated_at) VALUES(?,?,?,?,?,?, 'print_confirmed',?,?) ON CONFLICT(idempotency_key) DO NOTHING", crypto.randomUUID(), key, hash, payloadHash, JSON.stringify(payload), payload.amountCents, now, now).run();
-  const row = await query(env, 'SELECT * FROM orders WHERE idempotency_key=?', key).first();
+  let row = await query(env, 'SELECT * FROM orders WHERE idempotency_key=?', key).first();
+  if (!row) {
+    await throttle(env, 'print-global', 'all', Number(env.MAX_DAILY_PRINT_ORDERS) || 100, 86400, now);
+    await query(env, "INSERT INTO orders(id,idempotency_key,token_hash,payload_hash,payload,amount_cents,status,created_at,updated_at) VALUES(?,?,?,?,?,?, 'print_confirmed',?,?) ON CONFLICT(idempotency_key) DO NOTHING", crypto.randomUUID(), key, hash, payloadHash, JSON.stringify(payload), payload.amountCents, now, now).run();
+    row = await query(env, 'SELECT * FROM orders WHERE idempotency_key=?', key).first();
+  }
   if (row.token_hash !== hash || row.payload_hash !== payloadHash || row.status !== 'print_confirmed') fail(409, 'A confirmação não corresponde ao pedido original.');
   await enqueuePrint(env, row.id, now);
   return new Response(JSON.stringify({id:row.id, queued:true}), {status:201, headers});
@@ -252,6 +259,11 @@ export function createWorker(provider = mercadoPago) {
         const now = Date.now();
         const printSubmit = url.pathname === '/api/print/orders' && request.method === 'POST';
         const approvedPrint = url.pathname.match(/^\/api\/print\/orders\/([0-9a-f-]{36})$/);
+        const printConfirmationPath = url.pathname === '/api/print/orders' || approvedPrint;
+        if (request.method === 'OPTIONS' && printConfirmationPath) {
+          if (!allowed) fail(403, 'Origem não permitida.');
+          return new Response(null, {status:204, headers:{...headers, 'Access-Control-Allow-Methods':'POST, OPTIONS', 'Access-Control-Allow-Headers':'Content-Type, Authorization, Idempotency-Key'}});
+        }
         if (printSubmit || approvedPrint) {
           if (!allowed) fail(403, 'Origem não permitida.');
           if (printSubmit) return await submitPrintOrder(request, env, headers, now);

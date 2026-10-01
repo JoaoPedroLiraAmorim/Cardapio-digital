@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { webcrypto } = require('node:crypto');
 const order = require('./pedido.js');
 const html = fs.readFileSync(__dirname + '/cardapio.html', 'utf8');
 const products = Object.create(null);
@@ -70,4 +71,18 @@ test('Pix confirmado usa os modelos de retirada e entrega sem expor ID do pedido
     assert.ok(!message.includes('order-secreto'));
     assert.ok(!message.includes('Mercado Pago'));
   }
+});
+test('confirmação de impressão reutiliza credenciais após reload sem armazenar PII', async () => {
+  const values = new Map(); const storage = { getItem:key => values.get(key) || null, setItem:(key,value) => values.set(key,value) };
+  const requests = [];
+  const fetchImpl = async (_url, init) => { requests.push(init); return Response.json({id:'pedido-1',queued:true},{status:201}); };
+  const details = {customer:'Cliente secreto',fulfillment:'pickup',payment:'debit',notes:'Observação privada'};
+  const options = {fetchImpl,cryptoImpl:webcrypto,storageImpl:storage};
+  await order.createPrintClient(order.config.print,options).confirm(cart,details);
+  await order.createPrintClient(order.config.print,options).confirm(cart,details);
+  assert.equal(requests.length,2);
+  assert.equal(requests[0].headers.Authorization,requests[1].headers.Authorization);
+  assert.equal(requests[0].headers['Idempotency-Key'],requests[1].headers['Idempotency-Key']);
+  const persisted=[...values.values()].join('');
+  assert.ok(!persisted.includes('Cliente secreto')); assert.ok(!persisted.includes('Observação privada'));
 });

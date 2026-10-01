@@ -31,7 +31,7 @@ HML_API_URL=https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev
 DEVICE_NAME=caixa-01
 ```
 
-O administrador fornece o código temporário de pareamento por canal seguro. Não o coloque no `.env` ou no Git. No PowerShell, apenas durante o pareamento:
+O administrador fornece o código temporário de pareamento por canal seguro. Não o coloque no `.env` ou no Git. Antes deste passo, o responsável pelo Worker habilita temporariamente `PRINT_PAIRING_ENABLED=true`; depois que o comando concluir, deve voltar a variável para `false`. Claims e resultados dos dispositivos já pareados continuam funcionando com o pareamento desligado. No PowerShell, apenas durante o pareamento:
 
 ```powershell
 $env:PRINT_PAIRING_SECRET='codigo-temporario-recebido-por-canal-seguro'
@@ -40,7 +40,9 @@ Remove-Item Env:PRINT_PAIRING_SECRET
 npm start
 ```
 
-O token devolvido pelo Worker é salvo em `STATE_FILE` com acesso local restrito e somente o hash dele fica no D1. O serviço busca um job por vez. Para Pix online, a comanda só é criada após o pagamento ser aprovado e o cliente confirmar o pedido; para os demais meios, ela é criada no clique de confirmação.
+O token devolvido pelo Worker é salvo em `STATE_FILE` e somente o hash dele fica no D1. Proteja a conta do Windows e as permissões dessa pasta; modos POSIX como `0600` não substituem ACLs do Windows. O serviço busca um job por vez. Para Pix online, a comanda só é criada após o pagamento ser aprovado e o cliente confirmar o pedido; o endpoint público de dinheiro/cartão rejeita Pix. Para os demais meios, ela é criada no clique de confirmação.
+
+O navegador conserva por 30 minutos somente o hash do conteúdo e as credenciais aleatórias da confirmação. Isso permite que um reload repita a mesma chave sem guardar nome, endereço ou observações no armazenamento. Depois que o Worker recebe um resultado terminal, o serviço local remove do estado a cópia do pedido; jobs em andamento mantêm os dados apenas pelo tempo necessário para imprimir.
 
 ## Estados e recuperação
 
@@ -59,8 +61,8 @@ Ao reiniciar, um job que estava em impressão é marcado `uncertain`, evitando d
 ## Teste ponta a ponta HML
 
 1. Confirme primeiro `npm test` e `npm run print:test` em modo local.
-2. Com o Worker HML publicado pelo responsável, aplique a migração, configure `PRINT_SERVICE_ENABLED=true`, `PRINT_RETRY_SECONDS` e `PRINT_PAIRING_SECRET` apenas nos secrets/vars do Worker.
-3. Pareie o PC e inicie `npm start` em `MODE=hml`.
+2. Com o Worker HML publicado pelo responsável, aplique a migração, configure `PRINT_SERVICE_ENABLED=true`, `PRINT_RETRY_SECONDS`, `MAX_DAILY_PRINT_ORDERS` e `PRINT_PAIRING_SECRET` apenas nos secrets/vars do Worker.
+3. Defina `PRINT_PAIRING_ENABLED=true`, pareie o PC e volte imediatamente para `PRINT_PAIRING_ENABLED=false`. Então inicie `npm start` em `MODE=hml`.
 4. Confirme um pedido HML de cada forma de pagamento e verifique que o job aparece antes de abrir o WhatsApp; para Pix online, primeiro conclua o pagamento e então confirme o pedido.
 5. Confirme no D1 que o job virou `printed`; reinicie o serviço e confirme que ele não é impresso novamente.
 

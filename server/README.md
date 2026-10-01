@@ -54,6 +54,8 @@ Não registramos corpos, tokens ou dados de clientes em logs; observabilidade es
 
 O botão gratuito de WhatsApp exige que o cliente envie a mensagem. Uma mensagem editável dizendo "pago" não é comprovante para o dono: a hamburgueria deve confirmar o recebimento no painel Mercado Pago. Este servidor não inclui painel administrativo, envio automático pela WhatsApp Business API, gestão de estoque, reembolso automático, disponibilidade de cozinha ou confirmação automática de preparo.
 
+As rotas públicas de confirmação de impressão aceitam dinheiro, débito e crédito; Pix é enfileirado somente pela rota do pedido cuja situação oficial seja `approved`. Além do limite por IP, `MAX_DAILY_PRINT_ORDERS` limita novas confirmações locais por dia. O pareamento de impressoras deve ficar normalmente fechado: habilite `PRINT_PAIRING_ENABLED=true` apenas durante `npm run hml:pair` e retorne a `false` assim que o dispositivo for criado. Um dispositivo só pode solicitar retry manual de jobs incertos que ele próprio recebeu.
+
 ## Verificação local e limites da entrega
 
 ```sh

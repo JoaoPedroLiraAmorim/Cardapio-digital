@@ -54,13 +54,41 @@
       customer:clean(details.customer), address:clean(details.address), neighborhood:clean(details.neighborhood), reference:clean(details.reference), notes:clean(details.notes),
       needsChange:details.payment === "cash" && details.needsChange === true, changeForCents:details.payment === "cash" && details.needsChange ? details.changeFor : 0 };
   }
-  function createPrintClient(value, { fetchImpl = root.fetch?.bind(root), cryptoImpl = root.crypto } = {}) {
+  function createPrintClient(value, { fetchImpl = root.fetch?.bind(root), cryptoImpl = root.crypto, storageImpl } = {}) {
     const base = printBaseUrl(value); let pending = null;
+    const storageKey = "jg-print-confirmation-v1";
+    const maxPendingAge = 30 * 60 * 1000;
+    let storage = storageImpl || null;
+    try { if (storageImpl === undefined) storage = root.localStorage || null; } catch { /* Armazenamento pode estar bloqueado. */ }
+    async function payloadHash(serialized) {
+      if (!cryptoImpl?.subtle) return null;
+      const bytes = await cryptoImpl.subtle.digest("SHA-256", new TextEncoder().encode(serialized));
+      return [...new Uint8Array(bytes)].map(value => value.toString(16).padStart(2, "0")).join("");
+    }
+    function readPending(hash) {
+      if (!storage || !hash) return null;
+      try {
+        const saved = JSON.parse(storage.getItem(storageKey));
+        const fresh = Number.isFinite(saved?.createdAt) && Date.now() - saved.createdAt >= 0 && Date.now() - saved.createdAt <= maxPendingAge;
+        const token = /^[A-Za-z0-9_-]{43}$/.test(saved?.token || "");
+        const key = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved?.key || "");
+        return fresh && token && key && saved.payloadHash === hash ? saved : null;
+      } catch { return null; }
+    }
+    function savePending(value) {
+      if (!storage || !value.payloadHash) return;
+      try { storage.setItem(storageKey, JSON.stringify({ payloadHash:value.payloadHash, token:value.token, key:value.key, createdAt:value.createdAt })); } catch { /* A confirmação continua idempotente nesta aba. */ }
+    }
     function randomToken() { const bytes = cryptoImpl.getRandomValues(new Uint8Array(32)); return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
     async function confirm(cart, details) {
-      if (!base || !fetchImpl || !cryptoImpl?.randomUUID) throw new Error("Confirmação de pedido indisponível.");
+      if (!base || !fetchImpl || !cryptoImpl?.randomUUID || !cryptoImpl?.getRandomValues) throw new Error("Confirmação de pedido indisponível.");
       const payload = printPayload(cart, details); const serialized = JSON.stringify(payload);
-      if (!pending || pending.serialized !== serialized) pending = { serialized, token:randomToken(), key:cryptoImpl.randomUUID() };
+      const hash = await payloadHash(serialized);
+      if (!pending || pending.serialized !== serialized) {
+        const saved = readPending(hash);
+        pending = saved ? { ...saved, serialized } : { serialized, payloadHash:hash, token:randomToken(), key:cryptoImpl.randomUUID(), createdAt:Date.now() };
+        savePending(pending);
+      }
       const response = await fetchImpl(`${base}/api/print/orders`, { method:"POST", mode:"cors", credentials:"omit", cache:"no-store", redirect:"error",
         headers:{ "Content-Type":"application/json", Authorization:`Bearer ${pending.token}`, "Idempotency-Key":pending.key }, body:serialized });
       if (!response.ok) throw new Error("Não conseguimos confirmar a comanda agora. Tente novamente antes de abrir o WhatsApp.");

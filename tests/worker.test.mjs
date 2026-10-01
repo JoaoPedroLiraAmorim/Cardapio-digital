@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {createWorker, validateOrder} from '../server/worker.js';
+import {createWorker, validateOrder, validatePrintOrder} from '../server/worker.js';
 import {catalog} from '../server/catalog.js';
 
 // Execute the actual SQL against SQLite, including constraints/atomic UPDATE claims.
@@ -49,6 +49,15 @@ test('server catalog agrees with every price published in current menu', () => {
   const products=[...html.matchAll(/data-product-id="([^"]+)" data-price="(\d+)"/g)];
   assert.equal(products.length,Object.keys(catalog).length);
   for(const [,id,price] of products) assert.equal(catalog[id].priceCents,Number(price));
+});
+test('print confirmation accepts local payments without change and rejects unapproved Pix', () => {
+  const base = {fulfillment:'pickup',items:[{id:'item-1',quantity:1,notes:''}],customer:'Cliente'};
+  for (const payment of ['cash','debit','credit']) {
+    const validated = validatePrintOrder({...base,payment,needsChange:false,changeForCents:0});
+    assert.equal(validated.payment,payment); assert.equal(validated.changeForCents,0);
+  }
+  assert.throws(() => validatePrintOrder({...base,payment:'cash',needsChange:true,changeForCents:1}), /Troco/);
+  assert.throws(() => validatePrintOrder({...base,payment:'pix'}), /Pedido inválido/);
 });
 test('durable retry and concurrent claims create one charge; no PII returned', async () => {
   const f=fixture(); const results=await Promise.all([f.post(),f.post()]);
@@ -182,10 +191,13 @@ test('pending consultation without QR preserves saved QR until approval or expir
 
 test('print pairing, idempotent approved queue, atomic claim and results are protected', async () => {
   const f = fixture(); const pairing = Buffer.alloc(32, 3).toString('base64url');
-  Object.assign(f.env, {PRINT_SERVICE_ENABLED:'true', PRINT_PAIRING_SECRET:pairing, PRINT_RETRY_SECONDS:'30'});
+  Object.assign(f.env, {PRINT_SERVICE_ENABLED:'true', PRINT_PAIRING_ENABLED:'true', PRINT_PAIRING_SECRET:pairing, PRINT_RETRY_SECONDS:'30'});
   const pair = async (secret = pairing) => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + '/api/print/pair', {method:'POST',headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/json'},body:JSON.stringify({name:'caixa-01'})}), f.env);
   assert.equal((await pair('bad')).status, 401);
   const device = await (await pair()).json(); assert.match(device.token, /^[A-Za-z0-9_-]{43}$/);
+  const otherDevice = await (await pair()).json();
+  f.env.PRINT_PAIRING_ENABLED = 'false';
+  assert.equal((await pair()).status, 403);
   const row = await (await f.post()).json(); f.payments.get('10001').status = 'approved';
   await f.webhook(); await f.webhook();
   assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(row.id).count, 0);
@@ -203,6 +215,8 @@ test('print pairing, idempotent approved queue, atomic claim and results are pro
   f.env.DB.db.prepare('UPDATE print_jobs SET available_at=0').run();
   const retryClaim = await claim(); const retryJob = (await retryClaim.json()).job;
   assert.equal((await result('uncertain', retryJob.leaseToken)).status, 200);
+  const otherRetry = await f.worker.fetch(new Request(f.env.PUBLIC_API_URL + `/api/print/jobs/${job.id}/retry`, {method:'POST',headers:{Authorization:`Bearer ${otherDevice.token}`}}), f.env);
+  assert.equal(otherRetry.status, 409);
   const manual = await f.worker.fetch(new Request(f.env.PUBLIC_API_URL + `/api/print/jobs/${job.id}/retry`, {method:'POST',headers:{Authorization:`Bearer ${device.token}`}}), f.env);
   assert.equal(manual.status, 200);
   f.env.DB.db.prepare("UPDATE print_jobs SET status='leased', lease_until=? WHERE id=?").run(Date.now() - 1, job.id);
@@ -213,7 +227,7 @@ test('print pairing, idempotent approved queue, atomic claim and results are pro
 });
 
 test('confirmed WhatsApp order queues one command for any payment without waiting for Pix', async () => {
-  const f = fixture(); Object.assign(f.env, {PRINT_SERVICE_ENABLED:'true', PRINT_PAIRING_SECRET:Buffer.alloc(32, 3).toString('base64url'), PRINT_RETRY_SECONDS:'30'});
+  const f = fixture(); Object.assign(f.env, {PRINT_SERVICE_ENABLED:'true', PRINT_PAIRING_ENABLED:'true', PRINT_PAIRING_SECRET:Buffer.alloc(32, 3).toString('base64url'), PRINT_RETRY_SECONDS:'30'});
   const key = crypto.randomUUID(); const body = {...order(), payment:'cash', needsChange:true, changeForCents:6000};
   const submit = () => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + '/api/print/orders', {method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Authorization:`Bearer ${token}`,'Idempotency-Key':key},body:JSON.stringify(body)}), f.env);
   const first = await submit(); const response = await first.json(); assert.equal(first.status, 201); assert.equal(response.queued, true);
@@ -221,4 +235,22 @@ test('confirmed WhatsApp order queues one command for any payment without waitin
   assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs').get().count, 1);
   const stored = f.env.DB.db.prepare('SELECT status,payload FROM orders WHERE id=?').get(response.id);
   assert.equal(stored.status, 'print_confirmed'); assert.equal(JSON.parse(stored.payload).payment, 'cash');
+});
+
+test('public print confirmation preflight succeeds only for an allowed origin', async () => {
+  const f=fixture(); Object.assign(f.env,{PRINT_SERVICE_ENABLED:'true'});
+  for (const path of ['/api/print/orders',`/api/print/orders/${crypto.randomUUID()}`]) {
+    const preflight = headers => f.worker.fetch(new Request(f.env.PUBLIC_API_URL+path,{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization,content-type,idempotency-key',...headers}}),f.env);
+    const allowed=await preflight(); assert.equal(allowed.status,204);
+    assert.equal(allowed.headers.get('Access-Control-Allow-Origin'),origin);
+    assert.match(allowed.headers.get('Access-Control-Allow-Headers'),/Authorization/);
+    assert.equal((await preflight({Origin:'https://evil.example'})).status,403);
+  }
+});
+
+test('public print endpoint rejects Pix that did not use the approved-order route', async () => {
+  const f=fixture(); Object.assign(f.env,{PRINT_SERVICE_ENABLED:'true'});
+  const response=await f.worker.fetch(new Request(f.env.PUBLIC_API_URL+'/api/print/orders',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Authorization:`Bearer ${token}`,'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(order())}),f.env);
+  assert.equal(response.status,400);
+  assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs').get().count,0);
 });

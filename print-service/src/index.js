@@ -9,8 +9,16 @@ const { HmlClient } = require('./hml-client');
 
 async function runHml({ client, store, printer, config }) {
   const state = store.load();
+  let sanitized = false;
+  for (const job of state.jobs) {
+    if (['printed', 'failed', 'uncertain'].includes(job.status) && job.order) { delete job.order; sanitized = true; }
+  }
+  if (sanitized) store.save();
   for (const job of state.jobs.filter(job => job.status === 'uncertain' && job.leaseToken && !job.reportedUncertain)) {
-    try { await client.result(job.id, { status: 'uncertain', leaseToken: job.leaseToken, error: 'Serviço reiniciado antes da confirmação do spooler' }); job.reportedUncertain = true; store.save(); }
+    try {
+      await client.result(job.id, { status: 'uncertain', leaseToken: job.leaseToken, error: 'Serviço reiniciado antes da confirmação do spooler' });
+      job.reportedUncertain = true; delete job.leaseToken; store.save();
+    }
     catch (error) { logger.error('HML', `Não foi possível marcar #${job.id} como incerto`, error.message); }
   }
   const claimed = await client.claim();
@@ -28,11 +36,15 @@ async function runHml({ client, store, printer, config }) {
     await printer.printReceipt(formatOrder(order, config));
     spoolerAccepted = true;
     await client.result(id, { status: 'printed', leaseToken });
-    record.status = 'printed'; record.printedAt = Date.now(); logger.info('SUCCESS', `Pedido #${order.number || id} aceito pelo spooler e confirmado no HML`);
+    record.status = 'printed'; record.printedAt = Date.now(); delete record.order; delete record.leaseToken;
+    logger.info('SUCCESS', `Pedido #${order.number || id} aceito pelo spooler e confirmado no HML`);
   } catch (error) {
     const uncertain = Boolean(error.uncertain) || spoolerAccepted;
-    record.status = uncertain ? 'uncertain' : 'failed'; record.lastError = String(error.message || error).slice(0, 240);
-    try { await client.result(id, { status: uncertain ? 'uncertain' : 'failed', leaseToken, error: record.lastError }); record.reportedUncertain = uncertain; }
+    record.status = uncertain ? 'uncertain' : 'failed'; record.lastError = String(error.message || error).slice(0, 240); delete record.order;
+    try {
+      await client.result(id, { status: uncertain ? 'uncertain' : 'failed', leaseToken, error: record.lastError });
+      record.reportedUncertain = uncertain; delete record.leaseToken;
+    }
     catch (resultError) { logger.error('HML', `Resultado de #${id} não confirmado; mantido como incerto`, resultError.message); record.status = 'uncertain'; }
     logger.error('PRINT', uncertain ? `Pedido #${id} está incerto e não será reimpresso automaticamente` : `Falha ao imprimir #${id}`, record.lastError);
   } finally { store.save(); }
@@ -61,4 +73,6 @@ async function main() {
   process.once('SIGTERM', () => shutdown('SIGTERM'));
 }
 
-main().catch(error => { logger.error('SERVICE', 'Falha ao iniciar', error.message); process.exitCode = 1; });
+if (require.main === module) main().catch(error => { logger.error('SERVICE', 'Falha ao iniciar', error.message); process.exitCode = 1; });
+
+module.exports = { main, runHml };
