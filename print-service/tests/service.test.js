@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { loadConfig } = require('../src/config');
 const { formatOrder } = require('../src/formatter');
+const { rawReceipt } = require('../src/printer');
 const { HmlClient } = require('../src/hml-client');
 const { PrintQueue, StateStore } = require('../src/print-queue');
 const { runHml } = require('../src/index');
@@ -25,6 +26,13 @@ test('configuration supports local and HML while production remains blocked', ()
 test('formatter includes delivery, additions, removals, observations and money', () => {
   const receipt = formatOrder({id:'abc',fulfillment:'delivery',customer:'Ana',address:'Rua A',neighborhood:'Centro',items:[{name:'X',quantity:2,priceCents:1000,additions:['Bacon'],removals:['Cebola'],notes:'Bem passado'}],subtotalCents:2000,deliveryCents:300,totalCents:2300,payment:'pix',notes:'Interfone'}, {columns:42});
   for (const text of ['ENTREGA','+ Bacon','- SEM Cebola','OBS: Bem passado','PIX','R$']) assert.ok(receipt.includes(text));
+});
+
+test('comanda RAW preserva texto ASCII e envia o corte ESC/POS', () => {
+  const bytes = rawReceipt('João\r\nPedido', true);
+  assert.deepEqual([...bytes.subarray(0, 5)], [0x1b, 0x40, 0x1b, 0x61, 0x00]);
+  assert.match(bytes.toString('ascii'), /Jo\?o\r\nPedido/);
+  assert.deepEqual([...bytes.subarray(-3)], [0x1d, 0x56, 0x00]);
 });
 
 test('HML client persists the device token after pairing and sends authenticated claim', async () => {

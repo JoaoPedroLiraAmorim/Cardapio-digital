@@ -20,28 +20,28 @@
     const delivery = details.fulfillment === "delivery";
     const pixConfirmed = details.payment === "pix" && details.confirmedPayment;
     const lines = [
-      "Olá, JG Hamburgueria! 👋",
+      "Ol\u00e1, JG Hamburgueria! \u{1F44B}",
       "",
       pixConfirmed ? "Gostaria de confirmar este pedido:" : "Gostaria de fazer este pedido:",
       "",
-      `👤 Cliente: ${clean(details.customer)}`,
-      `${delivery ? "🛵" : "🏪"} Tipo: ${delivery ? "Entrega" : "Retirada"}`,
+      `\u{1F464} Cliente: ${clean(details.customer)}`,
+      `${delivery ? "\u{1F6F5}" : "\u{1F3EA}"} Tipo: ${delivery ? "Entrega" : "Retirada"}`,
     ];
     if (delivery) {
       const address = [clean(details.address), clean(details.neighborhood) && `Bairro: ${clean(details.neighborhood)}`, clean(details.reference) && `Complemento/referência: ${clean(details.reference)}`].filter(Boolean).join(", ");
-      lines.push(`📍 Endereço: ${address}`);
+      lines.push(`\u{1F4CD} Endereço: ${address}`);
     }
-    lines.push("", "🛒 Itens");
+    lines.push("", "\u{1F6D2} Itens");
     cart.forEach(item => {
       const product = products[item.id];
       lines.push(`${item.quantity} × ${product.name} — ${money(product.price * item.quantity)}`);
       if (product.allowsNotes && clean(item.notes)) lines.push(`  Observação: ${clean(item.notes)}`);
     });
     if (clean(details.notes)) lines.push(`Observação do pedido: ${clean(details.notes)}`);
-    lines.push("", "🧾 Resumo", `Subtotal: ${money(amounts.subtotal)}`, `Entrega: ${money(amounts.delivery)}`, `Total: ${money(amounts.total)}`, "");
-    lines.push(pixConfirmed ? "✅ Pagamento: Pix confirmado." : `💳 Pagamento: ${payments[details.payment]}, na ${delivery ? "entrega" : "retirada"}.`);
+    lines.push("", "\u{1F9FE} Resumo", `Subtotal: ${money(amounts.subtotal)}`, `Entrega: ${money(amounts.delivery)}`, `Total: ${money(amounts.total)}`, "");
+    lines.push(pixConfirmed ? "\u2705 Pagamento: Pix confirmado." : `\u{1F4B3} Pagamento: ${payments[details.payment]}, na ${delivery ? "entrega" : "retirada"}.`);
     if (details.payment === "cash" && details.needsChange) lines.push(`Troco para: ${money(details.changeFor)}`);
-    lines.push("", "🍔 Fico no aguardo da confirmação e do preparo. Obrigado!");
+    lines.push("", "\u{1F354} Fico no aguardo da confirmação e do preparo. Obrigado!");
     return lines.join("\n");
   }
   function printBaseUrl(value) {

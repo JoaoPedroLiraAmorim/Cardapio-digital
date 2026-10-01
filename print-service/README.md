@@ -1,6 +1,6 @@
 # Serviço de impressão — JG Hamburgueria
 
-Serviço Node.js sem interface gráfica para imprimir comandas confirmadas no cardápio e enviadas ao Worker/D1 HML. Ele atende Pix, dinheiro e cartões: o clique em **Confirmar pedido e abrir WhatsApp** cria a comanda antes de abrir o WhatsApp. O Firebase Hosting não participa da fila. O serviço envia texto para a impressora instalada no Windows pelo spooler (`Out-Printer`); uma aceitação do spooler não confirma que o papel saiu fisicamente.
+Serviço Node.js sem interface gráfica para imprimir comandas confirmadas no cardápio e enviadas ao Worker/D1 HML. Ele atende Pix, dinheiro e cartões: o clique em **Confirmar pedido e abrir WhatsApp** cria a comanda antes de abrir o WhatsApp. O Firebase Hosting não participa da fila. O serviço envia uma comanda RAW ESC/POS para a impressora instalada no Windows, preservando a largura fixa e enviando o comando de corte; uma aceitação do spooler não confirma que o papel saiu fisicamente.
 
 ## Antes de começar
 
