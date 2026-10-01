@@ -26,6 +26,7 @@ test('configuration supports local and HML while production remains blocked', ()
 test('formatter includes delivery, additions, removals, observations and money', () => {
   const receipt = formatOrder({id:'abc',fulfillment:'delivery',customer:'Ana',address:'Rua A',neighborhood:'Centro',items:[{name:'X',quantity:2,priceCents:1000,additions:['Bacon'],removals:['Cebola'],notes:'Bem passado'}],subtotalCents:2000,deliveryCents:300,totalCents:2300,payment:'pix',notes:'Interfone'}, {columns:42});
   for (const text of ['ENTREGA','+ Bacon','- SEM Cebola','OBS: Bem passado','PIX','R$']) assert.ok(receipt.includes(text));
+  assert.ok(!receipt.includes('R$?'));
 });
 
 test('comanda RAW preserva texto ASCII e envia o corte ESC/POS', () => {

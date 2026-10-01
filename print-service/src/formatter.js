@@ -2,7 +2,7 @@
 
 // A impressora recebe ESC/POS RAW em ASCII. Remove acentos e símbolos que não
 // têm representação estável nos code pages das térmicas Windows.
-const clean = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]+/g, '?').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+const clean = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').replace(/[^\x20-\x7e]+/g, '?').trim();
 const cents = value => Number.isInteger(value) ? value : Math.round(Number(value || 0) * 100);
 const money = value => (cents(value) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
