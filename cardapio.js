@@ -332,7 +332,10 @@ document.addEventListener("DOMContentLoaded", () => {
     stopPixPolling();
     try {
       const promise = details ? pix.start(cart, details) : pix.refresh();
-      showPix();
+      // A consulta automática acontece em segundo plano. Não redesenhe o
+      // botão como desabilitado durante a espera, pois isso causa um piscar a
+      // cada ciclo e parece um clique que o cliente não fez.
+      if (!poll) showPix();
       if (details) document.querySelector("#pix-title").focus();
       await promise;
       showPix();
