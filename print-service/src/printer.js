@@ -46,7 +46,8 @@ const encodedCommand = Buffer.from(rawPowerShell, 'utf16le').toString('base64');
 
 function rawReceipt(text, paperCut) {
   const printable = String(text).replace(/[^\x20-\x7e\r\n]/g, '?').replace(/\r?\n/g, '\r\n');
-  const end = paperCut ? '\n\n\n\x1d\x56\x00' : '\n\n\n';
+  // GS V 1: corte parcial, mantendo a comanda presa ao rolo.
+  const end = paperCut ? '\n\n\n\x1d\x56\x01' : '\n\n\n';
   return Buffer.concat([Buffer.from('\x1b\x40\x1b\x61\x00', 'binary'), Buffer.from(printable, 'ascii'), Buffer.from(end, 'binary')]);
 }
 

@@ -29,11 +29,11 @@ test('formatter includes delivery, additions, removals, observations and money',
   assert.ok(!receipt.includes('R$?'));
 });
 
-test('comanda RAW preserva texto ASCII e envia o corte ESC/POS', () => {
+test('comanda RAW preserva texto ASCII e envia o corte parcial ESC/POS', () => {
   const bytes = rawReceipt('João\r\nPedido', true);
   assert.deepEqual([...bytes.subarray(0, 5)], [0x1b, 0x40, 0x1b, 0x61, 0x00]);
   assert.match(bytes.toString('ascii'), /Jo\?o\r\nPedido/);
-  assert.deepEqual([...bytes.subarray(-3)], [0x1d, 0x56, 0x00]);
+  assert.deepEqual([...bytes.subarray(-3)], [0x1d, 0x56, 0x01]);
 });
 
 test('HML client persists the device token after pairing and sends authenticated claim', async () => {
