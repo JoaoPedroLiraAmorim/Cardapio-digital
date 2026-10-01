@@ -12,8 +12,6 @@
     "queue:retry": "node src/retry.js",
     "test": "node --test tests/*.test.js"
   },
-  "dependencies": {
-    "firebase-admin": "^13.4.0"
-  }
+  "dependencies": {}
 }
 

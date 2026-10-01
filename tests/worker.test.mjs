@@ -179,3 +179,22 @@ test('pending consultation without QR preserves saved QR until approval or expir
     assert.equal(final.status,finalState); assert.equal(final.qrCode,undefined); assert.equal(final.qrCodeBase64,undefined);
   }
 });
+
+test('print pairing is explicitly gated and approved Pix is claimed once', async () => {
+  const f = fixture();
+  const pairing = Buffer.alloc(32, 4).toString('base64url');
+  f.env.PRINT_SERVICE_ENABLED = 'true'; f.env.PRINT_PAIRING_ENABLED = 'false'; f.env.PRINT_PAIRING_SECRET = pairing;
+  const call = (path, token, body) => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) }), f.env);
+  assert.equal((await call('/api/print/pair', pairing, { name: 'Caixa HML' })).status, 403);
+  f.env.PRINT_PAIRING_ENABLED = 'true';
+  const paired = await (await call('/api/print/pair', pairing, { name: 'Caixa HML' })).json();
+  assert.match(paired.token, /^[A-Za-z0-9_-]{43}$/);
+  const created = await (await f.post()).json(); f.payments.get('10001').status = 'approved'; await f.webhook();
+  const [one, two] = await Promise.all([call('/api/print/jobs/claim', paired.token, {}), call('/api/print/jobs/claim', paired.token, {})]);
+  const claims = await Promise.all([one, two].map(async response => response.status === 204 ? null : response.json()));
+  assert.equal(claims.filter(Boolean).length, 1, JSON.stringify(claims));
+  const job = claims.find(Boolean)?.job;
+  assert.ok(job, JSON.stringify(claims));
+  assert.equal(job.order.id, created.id); assert.equal(job.order.paymentStatus, 'approved');
+  assert.equal((await call(`/api/print/jobs/${job.id}/result`, paired.token, { status: 'printed', leaseToken: job.leaseToken })).status, 200);
+});

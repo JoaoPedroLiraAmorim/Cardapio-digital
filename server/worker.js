@@ -87,6 +87,7 @@ async function enqueuePrint(env, orderId, now) {
 async function handlePrintRoute(request, env, url, headers, now) {
   if (env.PRINT_SERVICE_ENABLED !== 'true' || !env.DB || !env.PRINT_PAIRING_SECRET || env.PRINT_PAIRING_SECRET.length < 32) fail(503, 'Impressão HML indisponível.');
   if (url.pathname === '/api/print/pair' && request.method === 'POST') {
+    if (env.PRINT_PAIRING_ENABLED !== 'true') fail(403, 'Novo pareamento está desativado.');
     const {token} = await bearer(request, /^[A-Za-z0-9_-]{32,128}$/);
     if (await sha(token) !== await sha(env.PRINT_PAIRING_SECRET)) fail(401, 'Código de pareamento inválido.');
     const body = await readBody(request); const name = safeText(body.name, 80, true);
@@ -101,7 +102,7 @@ async function handlePrintRoute(request, env, url, headers, now) {
       WHERE id=(SELECT id FROM print_jobs WHERE status='queued' AND available_at<=? ORDER BY created_at LIMIT 1)
       RETURNING *`, leaseHash, now + 300000, device.id, now, now).first();
     if (!job) return new Response(null, {status:204, headers});
-    const order = await query(env, 'SELECT * FROM orders WHERE id=? AND status="approved"', job.order_id).first();
+    const order = await query(env, "SELECT * FROM orders WHERE id=? AND status='approved'", job.order_id).first();
     if (!order) fail(409, 'Pedido não está aprovado.');
     return new Response(JSON.stringify({job:{id:job.id, attempt:job.attempt, leaseToken, order:printOrder(order)}}), {headers});
   }
