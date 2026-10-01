@@ -7,6 +7,8 @@
   "vars": {
     "ENVIRONMENT": "hml",
     "PIX_ENABLED": "false",
+    "PRINT_SERVICE_ENABLED": "false",
+    "PRINT_RETRY_SECONDS": "60",
     "ALLOWED_ORIGINS": "https://hml-jg-hamburgueria.web.app,https://hml-jg-hamburgueria.firebaseapp.com",
     "PUBLIC_API_URL": "https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev",
     "MP_COLLECTOR_ID": "SUBSTITUIR",

@@ -9,11 +9,9 @@
   "scripts": {
     "start": "node src/index.js",
     "print:test": "node src/print-test.js",
+    "hml:pair": "node src/pair.js",
     "queue:retry": "node src/retry.js",
     "test": "node --test tests/*.test.js"
   },
-  "dependencies": {
-    "firebase-admin": "^13.4.0"
-  }
+  "dependencies": {}
 }
-

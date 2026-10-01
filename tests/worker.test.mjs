@@ -179,3 +179,46 @@ test('pending consultation without QR preserves saved QR until approval or expir
     assert.equal(final.status,finalState); assert.equal(final.qrCode,undefined); assert.equal(final.qrCodeBase64,undefined);
   }
 });
+
+test('print pairing, idempotent approved queue, atomic claim and results are protected', async () => {
+  const f = fixture(); const pairing = Buffer.alloc(32, 3).toString('base64url');
+  Object.assign(f.env, {PRINT_SERVICE_ENABLED:'true', PRINT_PAIRING_SECRET:pairing, PRINT_RETRY_SECONDS:'30'});
+  const pair = async (secret = pairing) => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + '/api/print/pair', {method:'POST',headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/json'},body:JSON.stringify({name:'caixa-01'})}), f.env);
+  assert.equal((await pair('bad')).status, 401);
+  const device = await (await pair()).json(); assert.match(device.token, /^[A-Za-z0-9_-]{43}$/);
+  const row = await (await f.post()).json(); f.payments.get('10001').status = 'approved';
+  await f.webhook(); await f.webhook();
+  assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(row.id).count, 0);
+  const approvePrint = () => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + `/api/print/orders/${row.id}`, {method:'POST',headers:{Origin:origin,Authorization:`Bearer ${token}`}}), f.env);
+  assert.equal((await approvePrint()).status, 200);
+  assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(row.id).count, 1);
+  const claim = () => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + '/api/print/jobs/claim', {method:'POST',headers:{Authorization:`Bearer ${device.token}`}}), f.env);
+  const [first, second] = await Promise.all([claim(), claim()]);
+  const leased = [first, second].find(response => response.status === 200); assert.ok(leased); assert.equal([first.status, second.status].filter(status => status === 200).length, 1);
+  const job = (await leased.json()).job;
+  const result = (status, leaseToken = job.leaseToken) => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + `/api/print/jobs/${job.id}/result`, {method:'POST',headers:{Authorization:`Bearer ${device.token}`,'Content-Type':'application/json'},body:JSON.stringify({status,leaseToken})}), f.env);
+  assert.equal((await result('printed', 'wrong')).status, 409);
+  assert.equal((await result('failed')).status, 200);
+  assert.equal(f.env.DB.db.prepare('SELECT status,available_at FROM print_jobs WHERE id=?').get(job.id).status, 'queued');
+  f.env.DB.db.prepare('UPDATE print_jobs SET available_at=0').run();
+  const retryClaim = await claim(); const retryJob = (await retryClaim.json()).job;
+  assert.equal((await result('uncertain', retryJob.leaseToken)).status, 200);
+  const manual = await f.worker.fetch(new Request(f.env.PUBLIC_API_URL + `/api/print/jobs/${job.id}/retry`, {method:'POST',headers:{Authorization:`Bearer ${device.token}`}}), f.env);
+  assert.equal(manual.status, 200);
+  f.env.DB.db.prepare("UPDATE print_jobs SET status='leased', lease_until=? WHERE id=?").run(Date.now() - 1, job.id);
+  await f.worker.scheduled({}, f.env);
+  assert.equal(f.env.DB.db.prepare('SELECT status FROM print_jobs WHERE id=?').get(job.id).status, 'uncertain');
+  f.env.DB.db.prepare('UPDATE print_devices SET revoked_at=? WHERE id=?').run(Date.now(), device.deviceId);
+  assert.equal((await claim()).status, 401);
+});
+
+test('confirmed WhatsApp order queues one command for any payment without waiting for Pix', async () => {
+  const f = fixture(); Object.assign(f.env, {PRINT_SERVICE_ENABLED:'true', PRINT_PAIRING_SECRET:Buffer.alloc(32, 3).toString('base64url'), PRINT_RETRY_SECONDS:'30'});
+  const key = crypto.randomUUID(); const body = {...order(), payment:'cash', needsChange:true, changeForCents:6000};
+  const submit = () => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + '/api/print/orders', {method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Authorization:`Bearer ${token}`,'Idempotency-Key':key},body:JSON.stringify(body)}), f.env);
+  const first = await submit(); const response = await first.json(); assert.equal(first.status, 201); assert.equal(response.queued, true);
+  assert.equal((await submit()).status, 201);
+  assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs').get().count, 1);
+  const stored = f.env.DB.db.prepare('SELECT status,payload FROM orders WHERE id=?').get(response.id);
+  assert.equal(stored.status, 'print_confirmed'); assert.equal(JSON.parse(stored.payload).payment, 'cash');
+});

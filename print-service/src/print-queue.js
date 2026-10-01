@@ -7,7 +7,7 @@ class StateStore {
   constructor(file) { this.file = file; this.state = null; }
   load() {
     if (this.state) return this.state;
-    if (!fs.existsSync(this.file)) this.state = { version: 1, firebaseActivatedAt: null, jobs: [] };
+    if (!fs.existsSync(this.file)) this.state = { version: 1, jobs: [], device: null };
     else {
       this.state = JSON.parse(fs.readFileSync(this.file, 'utf8'));
       if (this.state.version !== 1 || !Array.isArray(this.state.jobs)) throw new Error('Arquivo de estado incompatível.');
@@ -76,4 +76,3 @@ class PrintQueue {
 }
 
 module.exports = { PrintQueue, StateStore };
-

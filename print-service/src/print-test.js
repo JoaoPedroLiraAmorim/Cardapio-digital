@@ -7,6 +7,7 @@ const { createPrinter } = require('./printer');
 
 async function main() {
   const config = loadConfig();
+  if (config.mode !== 'local') throw new Error('npm run print:test só pode ser executado com MODE=local.');
   const order = {
     id: 'TESTE-001', number: 'TESTE', createdAt: new Date(), customer: 'Cliente Teste', fulfillment: 'pickup',
     items: [
@@ -21,4 +22,3 @@ async function main() {
 }
 
 main().catch(error => { logger.error('ERROR', 'Falha na impressão de teste', error.message); process.exitCode = 1; });
-

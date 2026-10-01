@@ -145,6 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const dock = document.querySelector(".cart-dock");
   const status = document.querySelector("#cart-status");
   const pix = window.JGPix.createClient(order.config.pix);
+  const printer = order.createPrintClient(order.config.print);
   const pixPanel = document.querySelector("#pix-panel");
   const pixState = document.querySelector("#pix-state");
   const pixRefresh = document.querySelector("#pix-refresh");
@@ -277,8 +278,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector("#pix-email-field").hidden = !onlinePix;
     form.elements.payerEmail.disabled = !onlinePix;
     form.elements.payerEmail.required = onlinePix;
-    document.querySelector("#checkout-submit").textContent = onlinePix ? "Gerar Pix para pagar" : "Continuar no WhatsApp ↗";
-    document.querySelector("#payment-hint").textContent = onlinePix ? "Você paga pelo aplicativo do seu banco. Confirmamos o Pix antes de enviar o pedido no WhatsApp." : "Você não paga aqui. O pedido e o pagamento serão confirmados pela hamburgueria no WhatsApp.";
+    document.querySelector("#checkout-submit").textContent = onlinePix ? "Gerar Pix para pagar" : "Confirmar pedido e abrir WhatsApp ↗";
+    document.querySelector("#payment-hint").textContent = onlinePix ? "Você paga pelo aplicativo do seu banco. Após aprovação, confirme para enviar a comanda e abrir o WhatsApp." : "Confirme para enviar a comanda à hamburgueria e depois abra o WhatsApp.";
     updateTotals();
   }
   function syncPixLock() {
@@ -371,22 +372,27 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.append(link); link.click(); link.remove();
     announce("Envie a mensagem no WhatsApp para solicitar seu pedido.");
   }
-  document.querySelector("#pix-whatsapp").addEventListener("click", () => {
+  document.querySelector("#pix-whatsapp").addEventListener("click", async () => {
     const session = pix.getSession();
     if (pixBusy || session?.order?.status !== "approved") return;
     const payment = session.order;
     const paidProducts = Object.fromEntries(payment.items.map(item => [item.id, { name: item.name, price: item.priceCents, allowsNotes: products[item.id]?.allowsNotes }]));
     const paidCart = payment.items.map(item => ({ id: item.id, quantity: item.quantity, notes: item.notes }));
     const message = order.message(paidCart, paidProducts, { ...session.details, payment: "pix", confirmedPayment: { id: payment.id, subtotal: payment.subtotalCents, delivery: payment.deliveryCents, total: payment.amountCents } });
-    openWhatsapp(message);
-    document.querySelector("#pix-new-order").hidden = false;
+    pixBusy = true; document.querySelector("#pix-whatsapp").disabled = true;
+    try {
+      printer.beginPix(session.token, session.key);
+      await printer.confirmApproved(payment);
+      openWhatsapp(message); document.querySelector("#pix-new-order").hidden = false;
+    } catch (error) { announce(error.message); }
+    finally { pixBusy = false; document.querySelector("#pix-whatsapp").disabled = false; }
   });
   document.querySelector("#open-cart").addEventListener("click", () => { dialog.showModal(); document.body.classList.add("cart-open"); if (pix.getSession()) { showPix(); pixAttempts = 0; runPix(); } });
   document.querySelector("#close-cart").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { document.body.classList.remove("cart-open"); stopPixPolling(); pix.pause(); });
   form.addEventListener("change", updateFields);
   form.elements.changeFor.addEventListener("input", () => form.elements.changeFor.setCustomValidity(""));
-  form.addEventListener("submit", event => {
+  form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!cart.length) return;
     for (const name of ["customer", "address", "neighborhood"]) {
@@ -405,7 +411,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (order.totals(cart, products, details.fulfillment).total > 150000) return announce("O Pix aceita pedidos de até R$ 1.500,00. Ajuste o carrinho.");
       pixAttempts = 0; runPix(false, details); return;
     }
-    openWhatsapp(order.message(cart, products, details));
+    const submit = document.querySelector("#checkout-submit"); submit.disabled = true;
+    try { await printer.confirm(cart, details); openWhatsapp(order.message(cart, products, details)); }
+    catch (error) { announce(error.message); }
+    finally { submit.disabled = false; }
   });
   form.addEventListener("input", event => {
     if (["customer", "address", "neighborhood"].includes(event.target.name)) event.target.setCustomValidity("");

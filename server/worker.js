@@ -36,6 +36,26 @@ export function validateOrder(body) {
   if (payload.amountCents > 150000) fail(400, 'Valor máximo excedido.');
   return payload;
 }
+export function validatePrintOrder(body) {
+  if (!body || !['pix', 'cash', 'debit', 'credit'].includes(body.payment) || !['delivery', 'pickup'].includes(body.fulfillment) || !Array.isArray(body.items) || !body.items.length || body.items.length > 12) fail(400, 'Pedido inválido.');
+  const seen = new Set(); let quantity = 0;
+  const items = body.items.map(item => {
+    const product = item && Object.hasOwn(catalog, item.id) && catalog[item.id];
+    if (!product || seen.has(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 20) fail(400, 'Itens inválidos.');
+    seen.add(item.id); quantity += item.quantity;
+    const notes = safeText(item.notes, 240); if (!product.allowsNotes && notes) fail(400, 'Bebidas não aceitam observações.');
+    return {id:item.id,name:product.name,quantity:item.quantity,notes,priceCents:product.priceCents};
+  });
+  if (quantity > 50) fail(400, 'Limite de itens excedido.');
+  const subtotalCents = items.reduce((sum, item) => sum + item.priceCents * item.quantity, 0);
+  const deliveryCents = body.fulfillment === 'delivery' ? deliveryFeeCents : 0;
+  const needsChange = body.payment === 'cash' && body.needsChange === true;
+  const changeForCents = needsChange ? Number(body.changeForCents) : 0;
+  if (!Number.isInteger(changeForCents) || changeForCents < subtotalCents + deliveryCents || changeForCents > 150000) fail(400, 'Troco inválido.');
+  return {items, payment:body.payment, fulfillment:body.fulfillment, customer:safeText(body.customer,80,true),
+    address:safeText(body.address,180,body.fulfillment === 'delivery'), neighborhood:safeText(body.neighborhood,80,body.fulfillment === 'delivery'), reference:safeText(body.reference,180), notes:safeText(body.notes,500), needsChange, changeForCents,
+    subtotalCents, deliveryCents, amountCents:subtotalCents + deliveryCents};
+}
 async function readBody(request) {
   if (!(request.headers.get('content-type') || '').startsWith('application/json')) fail(415, 'Envie JSON.');
   if (Number(request.headers.get('content-length') || 0) > 16384) fail(413, 'Pedido muito grande.');
@@ -77,7 +97,7 @@ function printOrder(row) {
   return {id: row.id, number: row.id.slice(0, 8).toUpperCase(), createdAt: row.created_at, customer: payload.customer,
     fulfillment: payload.fulfillment, address: payload.address, neighborhood: payload.neighborhood, reference: payload.reference,
     notes: payload.notes, items: payload.items, subtotalCents: payload.subtotalCents, deliveryCents: payload.deliveryCents,
-    totalCents: row.amount_cents, payment: payload.payment, paymentStatus: row.status};
+    totalCents: row.amount_cents, payment: payload.payment, changeForCents: payload.changeForCents, paymentStatus: row.status === 'approved' ? 'Pix aprovado' : 'Pedido confirmado'};
 }
 async function enqueuePrint(env, orderId, now) {
   if (env.PRINT_SERVICE_ENABLED !== 'true') return;
@@ -101,8 +121,8 @@ async function handlePrintRoute(request, env, url, headers, now) {
       WHERE id=(SELECT id FROM print_jobs WHERE status='queued' AND available_at<=? ORDER BY created_at LIMIT 1)
       RETURNING *`, leaseHash, now + 300000, device.id, now, now).first();
     if (!job) return new Response(null, {status:204, headers});
-    const order = await query(env, 'SELECT * FROM orders WHERE id=? AND status="approved"', job.order_id).first();
-    if (!order) fail(409, 'Pedido não está aprovado.');
+    const order = await query(env, "SELECT * FROM orders WHERE id=? AND status IN ('approved','print_confirmed')", job.order_id).first();
+    if (!order) fail(409, 'Pedido não está confirmado.');
     return new Response(JSON.stringify({job:{id:job.id, attempt:job.attempt, leaseToken, order:printOrder(order)}}), {headers});
   }
   const result = url.pathname.match(/^\/api\/print\/jobs\/([0-9a-f-]{36})\/result$/);
@@ -130,6 +150,27 @@ async function handlePrintRoute(request, env, url, headers, now) {
     return new Response(JSON.stringify({ok:true}), {headers});
   }
   fail(404, 'Rota não encontrada.');
+}
+async function submitPrintOrder(request, env, headers, now) {
+  if (env.PRINT_SERVICE_ENABLED !== 'true' || !env.DB || !env.RATE_LIMIT_SECRET) fail(503, 'Impressão HML indisponível.');
+  await throttle(env, 'print-ip', request.headers.get('CF-Connecting-IP') || 'local', 20, 600, now);
+  const {hash} = await bearer(request);
+  const key = request.headers.get('idempotency-key')?.toLowerCase();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key || '')) fail(400, 'Chave de confirmação inválida.');
+  const payload = validatePrintOrder(await readBody(request)); const payloadHash = await sha(JSON.stringify(payload));
+  await query(env, "INSERT INTO orders(id,idempotency_key,token_hash,payload_hash,payload,amount_cents,status,created_at,updated_at) VALUES(?,?,?,?,?,?, 'print_confirmed',?,?) ON CONFLICT(idempotency_key) DO NOTHING", crypto.randomUUID(), key, hash, payloadHash, JSON.stringify(payload), payload.amountCents, now, now).run();
+  const row = await query(env, 'SELECT * FROM orders WHERE idempotency_key=?', key).first();
+  if (row.token_hash !== hash || row.payload_hash !== payloadHash || row.status !== 'print_confirmed') fail(409, 'A confirmação não corresponde ao pedido original.');
+  await enqueuePrint(env, row.id, now);
+  return new Response(JSON.stringify({id:row.id, queued:true}), {status:201, headers});
+}
+async function confirmPaidPrintOrder(request, env, id, headers, now) {
+  if (env.PRINT_SERVICE_ENABLED !== 'true' || !env.DB) fail(503, 'Impressão HML indisponível.');
+  const hash = await tokenHash(request);
+  const row = await query(env, "SELECT * FROM orders WHERE id=? AND token_hash=? AND status='approved'", id, hash).first();
+  if (!row) fail(404, 'Pedido aprovado não encontrado.');
+  await enqueuePrint(env, row.id, now);
+  return new Response(JSON.stringify({id:row.id, queued:true}), {headers});
 }
 async function throttle(env, scope, identity, limit, seconds, now) {
   const bucket = Math.floor(now / (seconds * 1000));
@@ -163,7 +204,6 @@ async function applyPayment(env, row, payment, now) {
     String(payment.id), status, status, payment.qrCode || null, payment.qrCodeBase64 || null, payment.expiresAt || row.expires_at, now,
     row.id, String(payment.id), status, status, status, status).run();
   const updated = await query(env, 'SELECT * FROM orders WHERE id=?', row.id).first();
-  if (updated.status === 'approved') await enqueuePrint(env, row.id, now);
   return updated;
 }
 async function ensurePayment(env, row, provider, now) {
@@ -210,6 +250,13 @@ export function createWorker(provider = mercadoPago) {
       if (allowed) headers['Access-Control-Allow-Origin'] = origin;
       try {
         const now = Date.now();
+        const printSubmit = url.pathname === '/api/print/orders' && request.method === 'POST';
+        const approvedPrint = url.pathname.match(/^\/api\/print\/orders\/([0-9a-f-]{36})$/);
+        if (printSubmit || approvedPrint) {
+          if (!allowed) fail(403, 'Origem não permitida.');
+          if (printSubmit) return await submitPrintOrder(request, env, headers, now);
+          if (request.method === 'POST') return await confirmPaidPrintOrder(request, env, approvedPrint[1], headers, now);
+        }
         if (url.pathname.startsWith('/api/print/')) return await handlePrintRoute(request, env, url, headers, now);
         configured(env);
         const webhook = url.pathname === '/api/webhooks/mercado-pago';
@@ -264,19 +311,22 @@ export function createWorker(provider = mercadoPago) {
       }
     },
     async scheduled(_event, env) {
-      if (env.PIX_ENABLED !== 'true') return;
-      configured(env); const now = Date.now();
-      const rows = await query(env, "SELECT * FROM orders WHERE (status='creating' AND created_at>?) OR (status IN ('pending','expired') AND created_at>?) ORDER BY updated_at LIMIT 50", now - 23 * 3600000, now - 48 * 3600000).all();
-      for (const row of rows.results) {
-        try {
-          if (row.status === 'creating') await ensurePayment(env, row, provider, now);
-          else {
-            const updated = await refreshPayment(env, row, provider, now);
-            if (updated.status === 'pending' && updated.expires_at && Date.parse(updated.expires_at) <= now) {
-              await query(env, "UPDATE orders SET status='expired' WHERE id=? AND status='pending'", row.id).run();
+      if (!env.DB) return;
+      const now = Date.now();
+      if (env.PIX_ENABLED === 'true') {
+        configured(env);
+        const rows = await query(env, "SELECT * FROM orders WHERE (status='creating' AND created_at>?) OR (status IN ('pending','expired') AND created_at>?) ORDER BY updated_at LIMIT 50", now - 23 * 3600000, now - 48 * 3600000).all();
+        for (const row of rows.results) {
+          try {
+            if (row.status === 'creating') await ensurePayment(env, row, provider, now);
+            else {
+              const updated = await refreshPayment(env, row, provider, now);
+              if (updated.status === 'pending' && updated.expires_at && Date.parse(updated.expires_at) <= now) {
+                await query(env, "UPDATE orders SET status='expired' WHERE id=? AND status='pending'", row.id).run();
+              }
             }
-          }
-        } catch { await query(env, 'UPDATE orders SET updated_at=? WHERE id=?', now, row.id).run(); }
+          } catch { await query(env, 'UPDATE orders SET updated_at=? WHERE id=?', now, row.id).run(); }
+        }
       }
       await env.DB.batch([
         query(env, "UPDATE print_jobs SET status='uncertain',lease_token_hash=NULL,lease_until=0,last_error='Serviço interrompido durante envio ao spooler',updated_at=? WHERE status='leased' AND lease_until<?", now, now),

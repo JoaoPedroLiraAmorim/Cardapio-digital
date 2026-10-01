@@ -1,0 +1,67 @@
+# Serviço de impressão — JG Hamburgueria
+
+Serviço Node.js sem interface gráfica para imprimir comandas confirmadas no cardápio e enviadas ao Worker/D1 HML. Ele atende Pix, dinheiro e cartões: o clique em **Confirmar pedido e abrir WhatsApp** cria a comanda antes de abrir o WhatsApp. O Firebase Hosting não participa da fila. O serviço envia texto para a impressora instalada no Windows pelo spooler (`Out-Printer`); uma aceitação do spooler não confirma que o papel saiu fisicamente.
+
+## Antes de começar
+
+1. Instale o Node.js 22 ou mais recente.
+2. Instale o driver Windows da Bematech/Elgin MP-4200 HS e conecte a impressora por USB.
+3. Em **Configurações > Bluetooth e dispositivos > Impressoras e scanners**, copie o nome exato da impressora. Imprima antes uma página de teste pelo próprio Windows.
+4. Nesta pasta, execute `npm install` e copie `.env.example` para `.env`. Nunca versione o `.env` nem o arquivo em `data/`.
+
+Configure `PRINTER_NAME` com o nome copiado. `ENABLE_PAPER_CUT=true` acrescenta um form feed, que pode acionar corte dependendo do driver; confirme-o fisicamente antes de usar.
+
+## Modo local
+
+O modo local não acessa API alguma. Deixe `MODE=local` e execute:
+
+```powershell
+npm run print:test
+```
+
+Ele envia uma comanda fictícia ao spooler. Se houver timeout, não repita às cegas: confira a fila do Windows primeiro. O timeout vira estado incerto porque a impressão pode ter sido aceita pelo Windows.
+
+## Homologação HML
+
+Use somente depois de a migração e os secrets serem configurados no Worker HML. Defina:
+
+```ini
+MODE=hml
+HML_API_URL=https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev
+DEVICE_NAME=caixa-01
+```
+
+O administrador fornece o código temporário de pareamento por canal seguro. Não o coloque no `.env` ou no Git. No PowerShell, apenas durante o pareamento:
+
+```powershell
+$env:PRINT_PAIRING_SECRET='codigo-temporario-recebido-por-canal-seguro'
+npm run hml:pair
+Remove-Item Env:PRINT_PAIRING_SECRET
+npm start
+```
+
+O token devolvido pelo Worker é salvo em `STATE_FILE` com acesso local restrito e somente o hash dele fica no D1. O serviço busca um job por vez. Para Pix online, a comanda só é criada após o pagamento ser aprovado e o cliente confirmar o pedido; para os demais meios, ela é criada no clique de confirmação.
+
+## Estados e recuperação
+
+- `printed`: o Worker recebeu a confirmação de que o spooler aceitou o trabalho.
+- `failed`: erro conhecido antes da aceitação; o Worker devolve o job à fila após o atraso configurado.
+- `uncertain`: timeout, reinício durante a impressão ou perda de comunicação depois da aceitação. Não há reimpressão automática.
+
+Para repetir deliberadamente um job `uncertain`, confira a comanda e a fila do Windows e então execute:
+
+```powershell
+npm run queue:retry -- ID_DO_JOB
+```
+
+Ao reiniciar, um job que estava em impressão é marcado `uncertain`, evitando duplicidade. Para desligar o serviço use `Ctrl+C`; ele não apaga o estado local.
+
+## Teste ponta a ponta HML
+
+1. Confirme primeiro `npm test` e `npm run print:test` em modo local.
+2. Com o Worker HML publicado pelo responsável, aplique a migração, configure `PRINT_SERVICE_ENABLED=true`, `PRINT_RETRY_SECONDS` e `PRINT_PAIRING_SECRET` apenas nos secrets/vars do Worker.
+3. Pareie o PC e inicie `npm start` em `MODE=hml`.
+4. Confirme um pedido HML de cada forma de pagamento e verifique que o job aparece antes de abrir o WhatsApp; para Pix online, primeiro conclua o pagamento e então confirme o pedido.
+5. Confirme no D1 que o job virou `printed`; reinicie o serviço e confirme que ele não é impresso novamente.
+
+O serviço não publica Worker, Firebase ou produção. `MODE=production` é bloqueado intencionalmente até uma promoção futura.
