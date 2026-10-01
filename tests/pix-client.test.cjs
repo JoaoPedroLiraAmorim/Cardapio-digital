@@ -70,8 +70,8 @@ test('pagamento aprovado usa valores server na mensagem e conclusão explícita 
   await client.start(cart, details);
   const text = orderRules.message(cart, { 'item-1': { name: 'Hambúrguer', price: 3000, allowsNotes: true } }, { ...details, payment: 'pix', confirmedPayment: { id: 'order-1', subtotal: 3000, delivery: 400, total: 3400 } });
   assert.match(text, /Total: R\$\s*34,00/);
-  assert.match(text, /Pix confirmado pelo Mercado Pago/);
-  assert.match(text, /Pedido: order-1/);
+  assert.match(text, /✅ Pagamento: Pix confirmado\./);
+  assert.doesNotMatch(text, /order-1|Mercado Pago/);
   client.reset(); assert.ok(client.getSession());
   client.finish(); assert.equal(client.getSession(), null);
 });

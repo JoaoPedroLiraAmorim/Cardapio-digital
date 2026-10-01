@@ -123,8 +123,8 @@ test('client, Worker and real provider agree on totals, QR, signed approval and 
   const message = orderMessage.message(approved.items, products, { ...f.details,
     confirmedPayment: { id: approved.id, subtotal: approved.subtotalCents,
       delivery: approved.deliveryCents, total: approved.amountCents } });
-  assert.ok(message.includes(approved.id));
-  assert.match(message, /Pix confirmado pelo Mercado Pago/);
+  assert.ok(!message.includes(approved.id));
+  assert.match(message, /✅ Pagamento: Pix confirmado\./);
   assert.match(message, /56,98/);
   f.client.finish();
   assert.equal(f.client.getSession(), null);

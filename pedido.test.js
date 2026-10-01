@@ -20,21 +20,54 @@ test('restaura apenas itens válidos sem confiar em preços salvos', () => {
   assert.deepEqual(order.restore([{ id: 'item-1', quantity: 2, price: 1 }, { id: 'item-1', quantity: 1 }, { id: 'desconhecido', quantity: 1 }, { id: 'item-2', quantity: -1 }, { id: 'item-3', quantity: 1.5 }, { id: 'item-4', quantity: 100 }, null], products), [{ id: 'item-1', quantity: 2, notes: '' }]);
   assert.deepEqual(order.restore({}, products), []);
 });
-test('mensagem inclui itens, observações, endereço, pagamento e total correto', () => {
+test('mensagem de entrega no local segue o modelo e preserva informações opcionais', () => {
   const message = order.message(cart.map(item => item.id === 'item-8' ? { ...item, notes: 'Observação antiga da bebida' } : item), products, { customer: 'Teste', fulfillment: 'delivery', address: 'Rua de teste, 123', neighborhood: 'Centro', reference: 'Casa', payment: 'cash', needsChange: true, changeFor: 10000, notes: 'Tocar campainha' });
   assert.ok(!message.includes('Observação antiga da bebida'));
-  for (const expected of ['2 × Burg da casa', 'Um sem cebola', 'Rua de teste, 123', 'Bairro: Centro', 'Complemento/referência: Casa', 'Pagamento: Dinheiro', 'Troco para:', 'Tocar campainha']) assert.ok(message.includes(expected));
-  assert.ok(message.includes(`Total: ${order.money(6198)}`));
+  assert.equal(message, `Olá, JG Hamburgueria! 👋
+
+Gostaria de fazer este pedido:
+
+👤 Cliente: Teste
+🛵 Tipo: Entrega
+📍 Endereço: Rua de teste, 123, Bairro: Centro, Complemento/referência: Casa
+
+🛒 Itens
+2 × Burg da casa — ${order.money(5398)}
+  Observação: Um sem cebola
+1 × Coca-Cola — ${order.money(500)}
+Observação do pedido: Tocar campainha
+
+🧾 Resumo
+Subtotal: ${order.money(5898)}
+Entrega: ${order.money(300)}
+Total: ${order.money(6198)}
+
+💳 Pagamento: Dinheiro, na entrega.
+Troco para: ${order.money(10000)}
+
+🍔 Fico no aguardo da confirmação e do preparo. Obrigado!`);
   assert.equal(order.config.whatsapp, '5512981440776');
   assert.equal(new URL(`https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(message)}`).searchParams.get('text'), message);
 });
-test('todos os pagamentos e retirada sem endereço ou troco indevido', () => {
+test('retirada com pagamento no local segue o modelo', () => {
   for (const [payment, label] of Object.entries({ pix: 'Pix', debit: 'Cartão de débito', credit: 'Cartão de crédito', cash: 'Dinheiro' })) {
     const message = order.message(cart, products, { customer: 'Teste', fulfillment: 'pickup', address: 'Endereço antigo', payment });
-    assert.ok(message.includes(`Pagamento: ${label}`));
-    assert.ok(message.includes('Tipo: Retirada'));
+    assert.ok(message.startsWith('Olá, JG Hamburgueria! 👋\n\nGostaria de fazer este pedido:\n\n👤 Cliente: Teste\n🏪 Tipo: Retirada'));
+    assert.ok(message.includes(`💳 Pagamento: ${label}, na retirada.`));
     assert.ok(!message.includes('Endereço:'));
     assert.ok(!message.includes('Troco para:'));
     assert.ok(message.includes(`Total: ${order.money(5898)}`));
+    assert.ok(message.endsWith('🍔 Fico no aguardo da confirmação e do preparo. Obrigado!'));
+  }
+});
+test('Pix confirmado usa os modelos de retirada e entrega sem expor ID do pedido', () => {
+  for (const fulfillment of ['pickup', 'delivery']) {
+    const details = { customer: 'Teste', fulfillment, address: 'Rua A, 10', neighborhood: 'Centro', payment: 'pix', confirmedPayment: { id: 'order-secreto', subtotal: 5898, delivery: fulfillment === 'delivery' ? 300 : 0, total: fulfillment === 'delivery' ? 6198 : 5898 } };
+    const message = order.message(cart, products, details);
+    assert.ok(message.startsWith('Olá, JG Hamburgueria! 👋\n\nGostaria de confirmar este pedido:'));
+    assert.ok(message.includes(`\n${fulfillment === 'delivery' ? '🛵 Tipo: Entrega\n📍 Endereço: Rua A, 10, Bairro: Centro' : '🏪 Tipo: Retirada'}\n\n🛒 Itens`));
+    assert.ok(message.includes('\n✅ Pagamento: Pix confirmado.\n'));
+    assert.ok(!message.includes('order-secreto'));
+    assert.ok(!message.includes('Mercado Pago'));
   }
 });

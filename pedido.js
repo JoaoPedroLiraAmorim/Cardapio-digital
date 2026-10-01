@@ -17,22 +17,31 @@
   }
   function message(cart, products, details) {
     const amounts = details.confirmedPayment || totals(cart, products, details.fulfillment);
-    const lines = ["Olá! Quero fazer um pedido na JG Hamburgueria.", "", `Cliente: ${clean(details.customer)}`, `Tipo: ${details.fulfillment === "delivery" ? "Entrega" : "Retirada"}`];
-    if (details.fulfillment === "delivery") {
-      lines.push(`Endereço: ${clean(details.address)}`, `Bairro: ${clean(details.neighborhood)}`);
-      if (clean(details.reference)) lines.push(`Complemento/referência: ${clean(details.reference)}`);
+    const delivery = details.fulfillment === "delivery";
+    const pixConfirmed = details.payment === "pix" && details.confirmedPayment;
+    const lines = [
+      "Olá, JG Hamburgueria! 👋",
+      "",
+      pixConfirmed ? "Gostaria de confirmar este pedido:" : "Gostaria de fazer este pedido:",
+      "",
+      `👤 Cliente: ${clean(details.customer)}`,
+      `${delivery ? "🛵" : "🏪"} Tipo: ${delivery ? "Entrega" : "Retirada"}`,
+    ];
+    if (delivery) {
+      const address = [clean(details.address), clean(details.neighborhood) && `Bairro: ${clean(details.neighborhood)}`, clean(details.reference) && `Complemento/referência: ${clean(details.reference)}`].filter(Boolean).join(", ");
+      lines.push(`📍 Endereço: ${address}`);
     }
-    lines.push("", "ITENS");
+    lines.push("", "🛒 Itens");
     cart.forEach(item => {
       const product = products[item.id];
       lines.push(`${item.quantity} × ${product.name} — ${money(product.price * item.quantity)}`);
       if (product.allowsNotes && clean(item.notes)) lines.push(`  Observação: ${clean(item.notes)}`);
     });
-    lines.push("", `Subtotal: ${money(amounts.subtotal)}`, `Entrega: ${money(amounts.delivery)}`, `Total: ${money(amounts.total)}`, "", `Pagamento: ${payments[details.payment]}`);
-    if (details.payment === "pix" && details.confirmedPayment) lines.push("Pix confirmado pelo Mercado Pago.", `Pedido: ${clean(details.confirmedPayment.id)}`);
-    if (details.payment === "cash") lines.push(details.needsChange ? `Troco para: ${money(details.changeFor)}` : "Não preciso de troco.");
     if (clean(details.notes)) lines.push(`Observação do pedido: ${clean(details.notes)}`);
-    lines.push("", "Aguardo a confirmação do pedido pela hamburgueria.");
+    lines.push("", "🧾 Resumo", `Subtotal: ${money(amounts.subtotal)}`, `Entrega: ${money(amounts.delivery)}`, `Total: ${money(amounts.total)}`, "");
+    lines.push(pixConfirmed ? "✅ Pagamento: Pix confirmado." : `💳 Pagamento: ${payments[details.payment]}, na ${delivery ? "entrega" : "retirada"}.`);
+    if (details.payment === "cash" && details.needsChange) lines.push(`Troco para: ${money(details.changeFor)}`);
+    lines.push("", "🍔 Fico no aguardo da confirmação e do preparo. Obrigado!");
     return lines.join("\n");
   }
   const api = { config, money, restore, totals, message };
