@@ -56,6 +56,81 @@ async function tokenHash(request) {
   if (!token) fail(401, 'Acesso inválido.');
   return sha(token);
 }
+async function bearer(request, pattern = /^[A-Za-z0-9_-]{43}$/) {
+  const token = request.headers.get('authorization')?.match(/^Bearer ([A-Za-z0-9_-]{32,128})$/)?.[1];
+  if (!token || !pattern.test(token)) fail(401, 'Acesso inválido.');
+  return {token, hash: await sha(token)};
+}
+function randomToken() {
+  const bytes = new Uint8Array(32); crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function printDevice(request, env, now) {
+  const {hash} = await bearer(request);
+  const device = await query(env, 'SELECT id,name FROM print_devices WHERE token_hash=? AND revoked_at IS NULL', hash).first();
+  if (!device) fail(401, 'Dispositivo não autorizado.');
+  await query(env, 'UPDATE print_devices SET last_seen_at=? WHERE id=?', now, device.id).run();
+  return device;
+}
+function printOrder(row) {
+  const payload = JSON.parse(row.payload);
+  return {id: row.id, number: row.id.slice(0, 8).toUpperCase(), createdAt: row.created_at, customer: payload.customer,
+    fulfillment: payload.fulfillment, address: payload.address, neighborhood: payload.neighborhood, reference: payload.reference,
+    notes: payload.notes, items: payload.items, subtotalCents: payload.subtotalCents, deliveryCents: payload.deliveryCents,
+    totalCents: row.amount_cents, payment: payload.payment, paymentStatus: row.status};
+}
+async function enqueuePrint(env, orderId, now) {
+  if (env.PRINT_SERVICE_ENABLED !== 'true') return;
+  await query(env, `INSERT INTO print_jobs(id,order_id,status,available_at,created_at,updated_at)
+    VALUES(?,?,'queued',?,?,?) ON CONFLICT(order_id) DO NOTHING`, crypto.randomUUID(), orderId, now, now, now).run();
+}
+async function handlePrintRoute(request, env, url, headers, now) {
+  if (env.PRINT_SERVICE_ENABLED !== 'true' || !env.DB || !env.PRINT_PAIRING_SECRET || env.PRINT_PAIRING_SECRET.length < 32) fail(503, 'Impressão HML indisponível.');
+  if (url.pathname === '/api/print/pair' && request.method === 'POST') {
+    const {token} = await bearer(request, /^[A-Za-z0-9_-]{32,128}$/);
+    if (await sha(token) !== await sha(env.PRINT_PAIRING_SECRET)) fail(401, 'Código de pareamento inválido.');
+    const body = await readBody(request); const name = safeText(body.name, 80, true);
+    const deviceToken = randomToken(); const id = crypto.randomUUID();
+    await query(env, 'INSERT INTO print_devices(id,name,token_hash,last_seen_at,created_at) VALUES(?,?,?,?,?)', id, name, await sha(deviceToken), now, now).run();
+    return new Response(JSON.stringify({deviceId:id, token:deviceToken}), {status:201, headers});
+  }
+  const device = await printDevice(request, env, now);
+  if (url.pathname === '/api/print/jobs/claim' && request.method === 'POST') {
+    const leaseToken = randomToken(); const leaseHash = await sha(leaseToken);
+    const job = await query(env, `UPDATE print_jobs SET status='leased',attempt=attempt+1,lease_token_hash=?,lease_until=?,device_id=?,updated_at=?
+      WHERE id=(SELECT id FROM print_jobs WHERE status='queued' AND available_at<=? ORDER BY created_at LIMIT 1)
+      RETURNING *`, leaseHash, now + 300000, device.id, now, now).first();
+    if (!job) return new Response(null, {status:204, headers});
+    const order = await query(env, 'SELECT * FROM orders WHERE id=? AND status="approved"', job.order_id).first();
+    if (!order) fail(409, 'Pedido não está aprovado.');
+    return new Response(JSON.stringify({job:{id:job.id, attempt:job.attempt, leaseToken, order:printOrder(order)}}), {headers});
+  }
+  const result = url.pathname.match(/^\/api\/print\/jobs\/([0-9a-f-]{36})\/result$/);
+  if (result && request.method === 'POST') {
+    const body = await readBody(request);
+    if (!['printed','failed','uncertain'].includes(body.status)) fail(400, 'Resultado inválido.');
+    const leaseHash = await sha(safeText(body.leaseToken, 128, true));
+    const error = safeText(body.error, 240);
+    const retryAt = now + Math.max(30, Math.min(3600, Number(env.PRINT_RETRY_SECONDS) || 60)) * 1000;
+    const next = body.status === 'failed' ? 'queued' : body.status;
+    const changed = await query(env, `UPDATE print_jobs SET status=?,lease_token_hash=NULL,lease_until=0,available_at=?,last_error=?,updated_at=?
+      WHERE id=? AND device_id=? AND status='leased' AND lease_token_hash=? RETURNING id`,
+      next, body.status === 'failed' ? retryAt : now, error || null, now, result[1], device.id, leaseHash).first();
+    if (!changed) {
+      const existing = await query(env, 'SELECT status FROM print_jobs WHERE id=?', result[1]).first();
+      if (existing?.status !== 'printed' || body.status !== 'printed') fail(409, 'Reserva de impressão inválida.');
+    }
+    return new Response(JSON.stringify({ok:true, status:next}), {headers});
+  }
+  const retry = url.pathname.match(/^\/api\/print\/jobs\/([0-9a-f-]{36})\/retry$/);
+  if (retry && request.method === 'POST') {
+    const changed = await query(env, `UPDATE print_jobs SET status='queued',lease_token_hash=NULL,lease_until=0,available_at=?,last_error=NULL,updated_at=?
+      WHERE id=? AND status='uncertain' RETURNING id`, now, now, retry[1]).first();
+    if (!changed) fail(409, 'Impressão não está incerta.');
+    return new Response(JSON.stringify({ok:true}), {headers});
+  }
+  fail(404, 'Rota não encontrada.');
+}
 async function throttle(env, scope, identity, limit, seconds, now) {
   const bucket = Math.floor(now / (seconds * 1000));
   const key = await sha(`${env.RATE_LIMIT_SECRET}:${scope}:${identity}:${bucket}`);
@@ -87,7 +162,9 @@ async function applyPayment(env, row, payment, now) {
       OR (status='refunded' AND ?='charged_back'))`,
     String(payment.id), status, status, payment.qrCode || null, payment.qrCodeBase64 || null, payment.expiresAt || row.expires_at, now,
     row.id, String(payment.id), status, status, status, status).run();
-  return query(env, 'SELECT * FROM orders WHERE id=?', row.id).first();
+  const updated = await query(env, 'SELECT * FROM orders WHERE id=?', row.id).first();
+  if (updated.status === 'approved') await enqueuePrint(env, row.id, now);
+  return updated;
 }
 async function ensurePayment(env, row, provider, now) {
   if (row.status !== 'creating') return row;
@@ -132,11 +209,12 @@ export function createWorker(provider = mercadoPago) {
       const headers = {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Vary': 'Origin'};
       if (allowed) headers['Access-Control-Allow-Origin'] = origin;
       try {
+        const now = Date.now();
+        if (url.pathname.startsWith('/api/print/')) return await handlePrintRoute(request, env, url, headers, now);
         configured(env);
         const webhook = url.pathname === '/api/webhooks/mercado-pago';
         if (!webhook && !allowed) fail(403, 'Origem não permitida.');
         if (request.method === 'OPTIONS' && !webhook) return new Response(null, {status: 204, headers: {...headers, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, Idempotency-Key'}});
-        const now = Date.now();
         const ip = request.headers.get('CF-Connecting-IP') || 'local';
         if (webhook && request.method === 'POST') {
           const body = await readBody(request);
@@ -201,6 +279,7 @@ export function createWorker(provider = mercadoPago) {
         } catch { await query(env, 'UPDATE orders SET updated_at=? WHERE id=?', now, row.id).run(); }
       }
       await env.DB.batch([
+        query(env, "UPDATE print_jobs SET status='uncertain',lease_token_hash=NULL,lease_until=0,last_error='Serviço interrompido durante envio ao spooler',updated_at=? WHERE status='leased' AND lease_until<?", now, now),
         query(env, 'DELETE FROM rate_limits WHERE expires_at<?', now),
         query(env, 'DELETE FROM orders WHERE created_at<?', now - 7 * 86400000),
       ]);
