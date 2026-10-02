@@ -31,6 +31,13 @@ test('formatter includes delivery, additions, removals, observations and money',
   assert.ok(!receipt.includes('R$?'));
 });
 
+test('formatter traduz os códigos internos de pagamento para português', () => {
+  for (const [payment, label] of Object.entries({ cash:'DINHEIRO', debit:'CARTAO DE DEBITO', credit:'CARTAO DE CREDITO', pix:'PIX' })) {
+    const receipt = formatOrder({id:`pedido-${payment}`,items:[{name:'X',quantity:1,priceCents:1000}],payment}, {columns:42});
+    assert.match(receipt, new RegExp(`Pagamento: ${label}`));
+  }
+});
+
 test('comanda RAW preserva texto ASCII e envia o corte parcial ESC/POS', () => {
   const bytes = rawReceipt('João\r\nPedido', true);
   assert.deepEqual([...bytes.subarray(0, 5)], [0x1b, 0x40, 0x1b, 0x61, 0x00]);

@@ -5,6 +5,7 @@
 const clean = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').replace(/[^\x20-\x7e]+/g, '?').trim();
 const cents = value => Number.isInteger(value) ? value : Math.round(Number(value || 0) * 100);
 const money = value => (cents(value) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const paymentLabels = Object.freeze({ cash: 'DINHEIRO', debit: 'CARTAO DE DEBITO', credit: 'CARTAO DE CREDITO', pix: 'PIX' });
 
 function wrap(text, width) {
   const words = clean(text).split(' ').filter(Boolean);
@@ -69,7 +70,8 @@ function formatOrder(order, { columns = 42, test = false } = {}) {
   if (discount) lines.push(linePair('Desconto', `- ${money(discount)}`, columns));
   lines.push(linePair('TOTAL', money(total), columns));
   lines.push('-'.repeat(columns));
-  const payment = clean(order.paymentLabel || order.payment || 'Nao informado').toUpperCase();
+  const paymentCode = clean(order.payment || '').toLowerCase();
+  const payment = paymentLabels[paymentCode] || clean(order.paymentLabel || order.payment || 'Nao informado').toUpperCase();
   lines.push(...wrap(`Pagamento: ${payment}`, columns));
   if (order.paymentStatus) lines.push(...wrap(`Status pagamento: ${order.paymentStatus}`, columns));
   if (order.changeForCents) lines.push(`Troco para: ${money(order.changeForCents)}`);
