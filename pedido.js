@@ -1,6 +1,6 @@
 /* Regras do pedido: valores em centavos; nenhum pagamento é processado aqui. */
 (function (root) {
-  const config = { whatsapp: "5512983157450", deliveryFee: 300, pix: { enabled: false, apiBaseUrl: "" }, print: { enabled: false, apiBaseUrl: "" } };
+  const config = { whatsapp: "5512983157450", deliveryFee: 300, pix: { enabled: true, apiBaseUrl: "https://jg-cardapio-api-prod.jg-hamburgueria-cardapio.workers.dev" }, print: { enabled: true, apiBaseUrl: "https://jg-cardapio-api-prod.jg-hamburgueria-cardapio.workers.dev" } };
   const payments = { cash: "Dinheiro", debit: "Cartão de débito", credit: "Cartão de crédito", pix: "Pix" };
   const money = cents => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const clean = value => String(value || "").replace(/[\r\n]+/g, " ").trim();

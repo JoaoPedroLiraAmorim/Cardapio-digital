@@ -48,6 +48,8 @@ Troco para: ${order.money(10000)}
 
 🍔 Fico no aguardo da confirmação e do preparo. Obrigado!`);
   assert.equal(order.config.whatsapp, '5512983157450');
+  assert.deepEqual(order.config.pix, { enabled: true, apiBaseUrl: 'https://jg-cardapio-api-prod.jg-hamburgueria-cardapio.workers.dev' });
+  assert.deepEqual(order.config.print, { enabled: true, apiBaseUrl: 'https://jg-cardapio-api-prod.jg-hamburgueria-cardapio.workers.dev' });
   const url = new URL(`https://api.whatsapp.com/send?phone=${order.config.whatsapp}&text=${encodeURIComponent(message)}`);
   assert.equal(url.searchParams.get('phone'), order.config.whatsapp);
   assert.equal(url.searchParams.get('text'), message);
