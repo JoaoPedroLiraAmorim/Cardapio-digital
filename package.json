@@ -4,10 +4,14 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build.cjs",
-    "test": "node --test pedido.test.js tests/production.test.cjs",
-    "deploy": "firebase deploy --only hosting"
+    "test": "node --test --test-isolation=none pedido.test.js tests/production.test.cjs tests/mercado-pago.test.mjs tests/pix-client.test.cjs tests/worker.test.mjs tests/preflight.test.mjs",
+    "deploy": "firebase deploy --only hosting",
+    "test:integration": "node --test --test-isolation=none tests/pix-flow.test.mjs"
   },
   "devDependencies": {
     "firebase-tools": "^15.32.0"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

@@ -72,10 +72,16 @@ test('títulos sobre verde atingem contraste mínimo e logo é mais leve', () =>
   assert.ok(fs.statSync(path.join(root,'logo-JG.webp')).size < fs.statSync(path.join(root,'logo-JG.png')).size);
 });
 
-test('build bloqueia arquivo extra e mantém somente os cinco assets esperados', () => {
+test('consulta automática do Pix não pisca o botão de atualização', () => {
+  const script = fs.readFileSync(path.join(root,'cardapio.js'),'utf8');
+  assert.match(script, /if \(!poll\) showPix\(\);/);
+  assert.doesNotMatch(script, /const promise = details \? pix\.start\(cart, details\) : pix\.refresh\(\);\s*showPix\(\);/);
+});
+
+test('build bloqueia arquivo extra e mantém somente os assets públicos esperados', () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(),'jg-build-test-'));
   const publicPath = path.join(fixture,'public');
-  const assets = ['cardapio.css','cardapio.js','pedido.js','logo-JG.webp'];
+  const assets = ['cardapio.css','cardapio.js','pedido.js','pix.js','logo-JG.webp'];
   try {
     for (const file of [...assets,'cardapio.html']) fs.writeFileSync(path.join(fixture,file),'fixture');
     build(fixture);

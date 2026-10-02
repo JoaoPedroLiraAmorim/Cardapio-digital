@@ -1,0 +1,17 @@
+{
+  "name": "jg-print-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serviço local de impressão automática da JG Hamburgueria",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "print:test": "node src/print-test.js",
+    "hml:pair": "node src/pair.js",
+    "queue:retry": "node src/retry.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {}
+}

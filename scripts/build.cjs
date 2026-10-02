@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const assets = ['cardapio.css', 'cardapio.js', 'pedido.js', 'logo-JG.webp'];
+const assets = ['cardapio.css', 'cardapio.js', 'pedido.js', 'pix.js', 'logo-JG.webp'];
 function build(root) {
   const output = path.join(root, 'public');
   const expected = new Set(['index.html', ...assets]);
