@@ -62,11 +62,11 @@ async function main() {
   if (config.mode === 'local') {
     queue.start(); logger.info('MODE', 'Modo local: nenhuma API será acessada. Use npm run print:test para diagnóstico.');
   } else {
-    const client = new HmlClient({ apiUrl: config.hml.apiUrl, stateFile: config.stateFile, timeoutMs: config.timeoutMs });
+    const client = new HmlClient({ apiUrl: config.apiUrl, stateFile: config.stateFile, timeoutMs: config.timeoutMs });
     let polling = false;
     const poll = async () => { if (polling) return; polling = true; try { await runHml({ client, store, printer, config }); } catch (error) { logger.error('HML', 'Fila HML indisponível', error.message); } finally { polling = false; } };
     await poll(); timer = setInterval(poll, Math.min(config.retryMs, 5000));
-    logger.info('MODE', 'Modo HML: fila autenticada em execução. Pedidos confirmados e Pix aprovados são recebidos.');
+    logger.info('MODE', `Modo ${config.mode}: fila autenticada em execução. Pedidos confirmados e Pix aprovados são recebidos.`);
   }
   const shutdown = signal => { logger.info('SERVICE', `Encerrando por ${signal}`); if (timer) clearInterval(timer); queue.stop(); process.exit(0); };
   process.once('SIGINT', () => shutdown('SIGINT'));

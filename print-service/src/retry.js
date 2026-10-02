@@ -11,7 +11,7 @@ const id = process.argv[2];
 if (!id) { console.error('Uso: npm run queue:retry -- ID_DO_PEDIDO'); process.exit(1); }
 const config = loadConfig();
 if (config.mode === 'hml') {
-  new HmlClient({ apiUrl: config.hml.apiUrl, stateFile: config.stateFile, timeoutMs: config.timeoutMs }).retry(id)
+  new HmlClient({ apiUrl: config.apiUrl, stateFile: config.stateFile, timeoutMs: config.timeoutMs }).retry(id)
     .then(() => logger.info('HML', `Job #${id} devolvido à fila HML`))
     .catch(error => { logger.error('HML', 'Não foi possível repetir o job', error.message); process.exitCode = 1; });
   return;

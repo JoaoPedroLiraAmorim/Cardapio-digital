@@ -10,6 +10,7 @@
     "start": "node src/index.js",
     "print:test": "node src/print-test.js",
     "hml:pair": "node src/pair.js",
+    "production:pair": "node src/pair.js",
     "queue:retry": "node src/retry.js",
     "test": "node --test tests/*.test.js"
   },

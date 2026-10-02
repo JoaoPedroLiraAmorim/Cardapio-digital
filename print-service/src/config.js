@@ -38,12 +38,16 @@ function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
   if (!printerName) throw new Error('Configure PRINTER_NAME no arquivo .env.');
   const mode = String(values.MODE || 'local').trim().toLowerCase();
   if (!['local', 'hml', 'production'].includes(mode)) throw new Error('MODE deve ser local, hml ou production.');
-  if (mode === 'production') throw new Error('MODE=production está bloqueado até uma promoção futura.');
   const stateFile = path.resolve(cwd, values.STATE_FILE || './data/print-state.json');
-  const hmlApiUrl = String(values.HML_API_URL || 'https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev').replace(/\/$/, '');
-  if (mode === 'hml' && hmlApiUrl !== 'https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev') throw new Error('HML_API_URL não é o Worker HML autorizado.');
+  const apiUrl = String(values.API_URL || values.HML_API_URL || (mode === 'production'
+    ? 'https://jg-cardapio-api-prod.jg-hamburgueria-cardapio.workers.dev'
+    : 'https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev')).replace(/\/$/, '');
+  const allowedApiUrl = mode === 'production'
+    ? 'https://jg-cardapio-api-prod.jg-hamburgueria-cardapio.workers.dev'
+    : 'https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev';
+  if (mode !== 'local' && apiUrl !== allowedApiUrl) throw new Error(`API_URL não é o Worker ${mode} autorizado.`);
   const deviceName = String(values.DEVICE_NAME || '').trim();
-  if (mode === 'hml' && !deviceName) throw new Error('Configure DEVICE_NAME para o pareamento HML.');
+  if (mode !== 'local' && !deviceName) throw new Error(`Configure DEVICE_NAME para o pareamento ${mode}.`);
   return Object.freeze({
     mode,
     printerName,
@@ -54,7 +58,8 @@ function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     columns: integer(values.PAPER_COLUMNS, 42, 32, 64, 'PAPER_COLUMNS'),
     paperCut: bool(values.ENABLE_PAPER_CUT, true),
     copies: integer(values.PRINT_COPIES, 1, 1, 3, 'PRINT_COPIES'),
-    hml: { apiUrl: hmlApiUrl, deviceName },
+    apiUrl,
+    deviceName,
   });
 }
 
