@@ -1,0 +1,27 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "jg-cardapio-api-prod",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "vars": {
+    "ENVIRONMENT": "production",
+    "PIX_ENABLED": "false",
+    "PRINT_SERVICE_ENABLED": "false",
+    "PRINT_PAIRING_ENABLED": "false",
+    "PRINT_RETRY_SECONDS": "60",
+    "MAX_DAILY_PRINT_ORDERS": "500",
+    "ALLOWED_ORIGINS": "https://jg-hamburgueria.web.app,https://jg-hamburgueria.firebaseapp.com",
+    "PUBLIC_API_URL": "https://jg-cardapio-api-prod.jg-hamburgueria-cardapio.workers.dev",
+    "MAX_DAILY_ORDERS": "500"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jg-cardapio-prod",
+      "database_id": "bb2f645f-f55e-43e1-94a4-1b4376793565"
+    }
+  ],
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "observability": {"enabled": false}
+}
