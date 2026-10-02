@@ -97,7 +97,8 @@ function printOrder(row) {
   return {id: row.id, number: row.id.slice(0, 8).toUpperCase(), createdAt: row.created_at, customer: payload.customer,
     fulfillment: payload.fulfillment, address: payload.address, neighborhood: payload.neighborhood, reference: payload.reference,
     notes: payload.notes, items: payload.items, subtotalCents: payload.subtotalCents, deliveryCents: payload.deliveryCents,
-    totalCents: row.amount_cents, payment: payload.payment, changeForCents: payload.changeForCents, paymentStatus: row.status === 'approved' ? 'Pix aprovado' : 'Pedido confirmado'};
+    totalCents: row.amount_cents, payment: payload.payment, changeForCents: payload.changeForCents,
+    ...(row.status === 'approved' ? {paymentStatus: 'Pix aprovado'} : {})};
 }
 async function enqueuePrint(env, orderId, now) {
   if (env.PRINT_SERVICE_ENABLED !== 'true') return;

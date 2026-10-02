@@ -235,6 +235,10 @@ test('confirmed WhatsApp order queues one command for any payment without waitin
   assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs').get().count, 1);
   const stored = f.env.DB.db.prepare('SELECT status,payload FROM orders WHERE id=?').get(response.id);
   assert.equal(stored.status, 'print_confirmed'); assert.equal(JSON.parse(stored.payload).payment, 'cash');
+  const pairing = f.env.PRINT_PAIRING_SECRET;
+  const paired = await (await f.worker.fetch(new Request(f.env.PUBLIC_API_URL + '/api/print/pair', {method:'POST',headers:{Authorization:`Bearer ${pairing}`,'Content-Type':'application/json'},body:JSON.stringify({name:'caixa-01'})}), f.env)).json();
+  const claimed = await (await f.worker.fetch(new Request(f.env.PUBLIC_API_URL + '/api/print/jobs/claim', {method:'POST',headers:{Authorization:`Bearer ${paired.token}`}}), f.env)).json();
+  assert.equal(claimed.job.order.paymentStatus, undefined);
 });
 
 test('public print confirmation preflight succeeds only for an allowed origin', async () => {
