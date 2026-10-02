@@ -9,7 +9,7 @@ Serviço Node.js sem interface gráfica para imprimir comandas confirmadas no ca
 3. Em **Configurações > Bluetooth e dispositivos > Impressoras e scanners**, copie o nome exato da impressora. Imprima antes uma página de teste pelo próprio Windows.
 4. Nesta pasta, execute `npm install` e copie `.env.example` para `.env`. Nunca versione o `.env` nem o arquivo em `data/`.
 
-Configure `PRINTER_NAME` com o nome copiado. `ENABLE_PAPER_CUT=true` acrescenta um form feed, que pode acionar corte dependendo do driver; confirme-o fisicamente antes de usar.
+Configure `PRINTER_NAME` com o nome copiado. `ENABLE_PAPER_CUT=true` envia o comando ESC/POS de corte parcial, mantendo a via presa ao rolo. `PRINT_COPIES=1` é o padrão; mude temporariamente para `2` para imprimir duas vias idênticas de cada comanda. Como a comunicação é RAW ESC/POS, essa quantidade é controlada pelo serviço, não por uma opção física da impressora ou pelo driver do Windows.
 
 ## Modo local
 

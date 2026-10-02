@@ -53,6 +53,7 @@ function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     timeoutMs: integer(values.PRINT_TIMEOUT_SECONDS, 30, 5, 300, 'PRINT_TIMEOUT_SECONDS') * 1000,
     columns: integer(values.PAPER_COLUMNS, 42, 32, 64, 'PAPER_COLUMNS'),
     paperCut: bool(values.ENABLE_PAPER_CUT, true),
+    copies: integer(values.PRINT_COPIES, 1, 1, 3, 'PRINT_COPIES'),
     hml: { apiUrl: hmlApiUrl, deviceName },
   });
 }

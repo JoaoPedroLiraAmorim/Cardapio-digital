@@ -57,7 +57,7 @@ async function main() {
   const printer = createPrinter(config);
   const queue = new PrintQueue({ store, printer, formatter: order => formatOrder(order, config), logger, retryMs: config.retryMs });
   logger.info('SERVICE', 'Serviço de impressão iniciado');
-  logger.info('PRINTER', `Impressora configurada: ${config.printerName}`);
+  logger.info('PRINTER', `Impressora configurada: ${config.printerName} (${config.copies} via${config.copies === 1 ? '' : 's'} por comanda)`);
   let timer = null;
   if (config.mode === 'local') {
     queue.start(); logger.info('MODE', 'Modo local: nenhuma API será acessada. Use npm run print:test para diagnóstico.');
@@ -66,7 +66,7 @@ async function main() {
     let polling = false;
     const poll = async () => { if (polling) return; polling = true; try { await runHml({ client, store, printer, config }); } catch (error) { logger.error('HML', 'Fila HML indisponível', error.message); } finally { polling = false; } };
     await poll(); timer = setInterval(poll, Math.min(config.retryMs, 5000));
-    logger.info('MODE', 'Modo HML: fila autenticada em execução. Apenas pedidos Pix approved são recebidos.');
+    logger.info('MODE', 'Modo HML: fila autenticada em execução. Pedidos confirmados e Pix aprovados são recebidos.');
   }
   const shutdown = signal => { logger.info('SERVICE', `Encerrando por ${signal}`); if (timer) clearInterval(timer); queue.stop(); process.exit(0); };
   process.once('SIGINT', () => shutdown('SIGINT'));

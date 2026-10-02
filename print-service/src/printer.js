@@ -55,7 +55,7 @@ function createPrinter(config, { spawnImpl = spawn, platform = process.platform 
   async function printReceipt(text) {
     if (platform !== 'win32') throw new PrintError('A impressão física requer Windows.');
     const payload = rawReceipt(text, config.paperCut);
-    return new Promise((resolve, reject) => {
+    const sendCopy = () => new Promise((resolve, reject) => {
       const child = spawnImpl('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encodedCommand], {
         windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'],
         env: { ...process.env, JG_PRINT_TARGET: config.printerName, JG_PRINT_DATA: payload.toString('base64') },
@@ -66,6 +66,14 @@ function createPrinter(config, { spawnImpl = spawn, platform = process.platform 
       child.once('error', error => { clearTimeout(timer); reject(new PrintError(`Não foi possível iniciar o spooler: ${error.message}`)); });
       child.once('close', code => { clearTimeout(timer); if (code === 0) resolve({ accepted: true }); else reject(new PrintError(`Impressora indisponível ou erro do Windows (código ${code}): ${errorText.trim().slice(0, 240)}`)); });
     });
+    for (let copy = 1; copy <= config.copies; copy += 1) {
+      try { await sendCopy(); }
+      catch (error) {
+        if (copy > 1) throw new PrintError(`A via ${copy} de ${config.copies} falhou após ao menos uma via ter sido enviada: ${error.message}`, { uncertain: true });
+        throw error;
+      }
+    }
+    return { accepted: true, copies: config.copies };
   }
   return { printReceipt };
 }

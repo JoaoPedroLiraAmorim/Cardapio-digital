@@ -19,6 +19,8 @@ test('configuration supports local and HML while production remains blocked', ()
   assert.equal(loadConfig({cwd,env:base}).mode, 'local');
   const hml = loadConfig({cwd,env:{...base,MODE:'hml',DEVICE_NAME:'caixa'}});
   assert.equal(hml.hml.apiUrl, 'https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev');
+  assert.equal(loadConfig({cwd,env:{...base,PRINT_COPIES:'2'}}).copies, 2);
+  assert.throws(() => loadConfig({cwd,env:{...base,PRINT_COPIES:'4'}}), /PRINT_COPIES/);
   assert.throws(() => loadConfig({cwd,env:{...base,MODE:'production'}}), /bloqueado/);
   assert.throws(() => loadConfig({cwd,env:{...base,MODE:'hml',DEVICE_NAME:'caixa',HML_API_URL:'https:\/\/other.example'}}), /autorizado/);
 });
