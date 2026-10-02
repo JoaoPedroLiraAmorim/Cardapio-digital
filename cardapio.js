@@ -367,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   function openWhatsapp(message) {
     const link = document.createElement("a");
-    link.href = `https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(message)}`;
+    link.href = `https://api.whatsapp.com/send?phone=${order.config.whatsapp}&text=${encodeURIComponent(message)}`;
     link.target = "_blank"; link.rel = "noopener noreferrer";
     document.body.append(link); link.click(); link.remove();
     announce("Envie a mensagem no WhatsApp para solicitar seu pedido.");

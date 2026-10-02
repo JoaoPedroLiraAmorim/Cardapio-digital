@@ -48,7 +48,10 @@ Troco para: ${order.money(10000)}
 
 🍔 Fico no aguardo da confirmação e do preparo. Obrigado!`);
   assert.equal(order.config.whatsapp, '5512981440776');
-  assert.equal(new URL(`https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(message)}`).searchParams.get('text'), message);
+  const url = new URL(`https://api.whatsapp.com/send?phone=${order.config.whatsapp}&text=${encodeURIComponent(message)}`);
+  assert.equal(url.searchParams.get('phone'), order.config.whatsapp);
+  assert.equal(url.searchParams.get('text'), message);
+  assert.match(url.search, /%F0%9F%91%8B/);
 });
 test('retirada com pagamento no local segue o modelo', () => {
   for (const [payment, label] of Object.entries({ pix: 'Pix', debit: 'Cartão de débito', credit: 'Cartão de crédito', cash: 'Dinheiro' })) {
