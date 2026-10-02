@@ -372,20 +372,15 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.append(link); link.click(); link.remove();
     announce("Envie a mensagem no WhatsApp para solicitar seu pedido.");
   }
-  document.querySelector("#pix-whatsapp").addEventListener("click", async () => {
+  document.querySelector("#pix-whatsapp").addEventListener("click", () => {
     const session = pix.getSession();
     if (pixBusy || session?.order?.status !== "approved") return;
     const payment = session.order;
     const paidProducts = Object.fromEntries(payment.items.map(item => [item.id, { name: item.name, price: item.priceCents, allowsNotes: products[item.id]?.allowsNotes }]));
     const paidCart = payment.items.map(item => ({ id: item.id, quantity: item.quantity, notes: item.notes }));
     const message = order.message(paidCart, paidProducts, { ...session.details, payment: "pix", confirmedPayment: { id: payment.id, subtotal: payment.subtotalCents, delivery: payment.deliveryCents, total: payment.amountCents } });
-    pixBusy = true; document.querySelector("#pix-whatsapp").disabled = true;
-    try {
-      printer.beginPix(session.token, session.key);
-      await printer.confirmApproved(payment);
-      openWhatsapp(message); document.querySelector("#pix-new-order").hidden = false;
-    } catch (error) { announce(error.message); }
-    finally { pixBusy = false; document.querySelector("#pix-whatsapp").disabled = false; }
+    openWhatsapp(message);
+    document.querySelector("#pix-new-order").hidden = false;
   });
   document.querySelector("#open-cart").addEventListener("click", () => { dialog.showModal(); document.body.classList.add("cart-open"); if (pix.getSession()) { showPix(); pixAttempts = 0; runPix(); } });
   document.querySelector("#close-cart").addEventListener("click", () => dialog.close());

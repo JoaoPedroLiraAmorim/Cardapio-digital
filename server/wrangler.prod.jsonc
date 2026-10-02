@@ -6,8 +6,8 @@
   "workers_dev": true,
   "vars": {
     "ENVIRONMENT": "production",
-    "PIX_ENABLED": "false",
-    "PRINT_SERVICE_ENABLED": "false",
+    "PIX_ENABLED": "true",
+    "PRINT_SERVICE_ENABLED": "true",
     "PRINT_PAIRING_ENABLED": "false",
     "PRINT_RETRY_SECONDS": "60",
     "MAX_DAILY_PRINT_ORDERS": "500",

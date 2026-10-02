@@ -16,7 +16,14 @@ class D1 {
       async run() { const result = statement.run(...params); return {meta: {changes: result.changes}}; }};
     return query;
   }
-  async batch(statements) { return Promise.all(statements.map(statement => statement.run())); }
+  async batch(statements) {
+    this.db.exec('BEGIN');
+    try {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      this.db.exec('COMMIT'); return results;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
 }
 const origin = 'https://jg-hamburgueria.web.app';
 const token = Buffer.alloc(32, 7).toString('base64url');
@@ -92,8 +99,9 @@ test('unsigned webhook rejected; verified provider result approves once and cann
 });
 test('provider amount, receiver and reference must match before approval', async () => {
   for (const [field,value] of [['amountCents',1],['collectorId','999'],['externalReference',crypto.randomUUID()],['currencyId','USD'],['paymentMethodId','card']]) {
-    const f=fixture(); const row=await (await f.post()).json(); f.payments.get('10001').status='approved'; f.payments.get('10001')[field]=value;
+    const f=fixture(); f.env.PRINT_SERVICE_ENABLED='true'; const row=await (await f.post()).json(); f.payments.get('10001').status='approved'; f.payments.get('10001')[field]=value;
     await f.webhook(); assert.equal((await (await f.get(row.id)).json()).status,'pending');
+    assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs').get().count, 0);
   }
 });
 test('GET catches missed webhooks and throttles provider polling', async () => {
@@ -200,7 +208,7 @@ test('print pairing, idempotent approved queue, atomic claim and results are pro
   assert.equal((await pair()).status, 403);
   const row = await (await f.post()).json(); f.payments.get('10001').status = 'approved';
   await f.webhook(); await f.webhook();
-  assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(row.id).count, 0);
+  assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(row.id).count, 1);
   const approvePrint = () => f.worker.fetch(new Request(f.env.PUBLIC_API_URL + `/api/print/orders/${row.id}`, {method:'POST',headers:{Origin:origin,Authorization:`Bearer ${token}`}}), f.env);
   assert.equal((await approvePrint()).status, 200);
   assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(row.id).count, 1);
@@ -257,4 +265,66 @@ test('public print endpoint rejects Pix that did not use the approved-order rout
   const response=await f.worker.fetch(new Request(f.env.PUBLIC_API_URL+'/api/print/orders',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Authorization:`Bearer ${token}`,'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(order())}),f.env);
   assert.equal(response.status,400);
   assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs').get().count,0);
+});
+
+const jobCount = (f, id) => f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(id).count;
+test('approved Pix automatically queues once through webhook, polling, scheduled and creation', async () => {
+  for (const source of ['webhook', 'polling', 'scheduled', 'creation']) {
+    const f = fixture(); f.env.PRINT_SERVICE_ENABLED = 'true';
+    if (source === 'creation') {
+      const create = f.provider.createPix;
+      f.provider.createPix = async args => { const payment = await create(args); payment.status = 'approved'; return payment; };
+    }
+    const row = await (await f.post()).json();
+    assert.equal(jobCount(f, row.id), source === 'creation' ? 1 : 0);
+    f.payments.get('10001').status = 'approved';
+    f.env.DB.db.prepare('UPDATE orders SET updated_at=0').run();
+    if (source === 'webhook') {
+      await Promise.all([f.webhook(), f.webhook()]);
+    } else if (source === 'polling') await f.get(row.id);
+    else if (source === 'scheduled') await f.worker.scheduled({}, f.env);
+    assert.equal(f.env.DB.db.prepare('SELECT status FROM orders WHERE id=?').get(row.id).status, 'approved');
+    assert.equal(jobCount(f, row.id), 1, source);
+    await f.get(row.id); await f.worker.scheduled({}, f.env); await f.webhook(); await f.post();
+    assert.equal(jobCount(f, row.id), 1, source + ' retries');
+    // Retain terminal jobs: repeated approvals cannot requeue a printed or uncertain job.
+    for (const status of ['printed', 'uncertain']) {
+      f.env.DB.db.prepare('UPDATE print_jobs SET status=? WHERE order_id=?').run(status, row.id);
+      await f.webhook();
+      assert.equal(jobCount(f, row.id), 1);
+      assert.equal(f.env.DB.db.prepare('SELECT status FROM print_jobs WHERE order_id=?').get(row.id).status, status);
+    }
+  }
+});
+
+test('disabled printing preserves Pix approval and never queues a job', async () => {
+  for (const value of [undefined, 'false', 'TRUE']) {
+    const f = fixture(); f.env.PRINT_SERVICE_ENABLED = value;
+    const row = await (await f.post()).json(); f.payments.get('10001').status = 'approved';
+    assert.equal((await f.webhook()).status, 200);
+    assert.equal((await (await f.get(row.id)).json()).status, 'approved');
+    assert.equal(jobCount(f, row.id), 0);
+  }
+});
+
+test('queue write failure rolls back approval so verified webhook retry can recover', async () => {
+  const f = fixture(); f.env.PRINT_SERVICE_ENABLED = 'true';
+  const row = await (await f.post()).json(); f.payments.get('10001').status = 'approved';
+  f.env.DB.db.exec("CREATE TRIGGER fail_queue BEFORE INSERT ON print_jobs BEGIN SELECT RAISE(ABORT, 'queue unavailable'); END;");
+  assert.equal((await f.webhook()).status, 503);
+  assert.equal(f.env.DB.db.prepare('SELECT status FROM orders WHERE id=?').get(row.id).status, 'pending');
+  assert.equal(jobCount(f, row.id), 0);
+  f.env.DB.db.exec('DROP TRIGGER fail_queue');
+  assert.equal((await f.webhook()).status, 200); assert.equal(jobCount(f, row.id), 1);
+});
+
+test('print migration has a unique order constraint compatible with enqueue conflict handling', () => {
+  const db = new DatabaseSync(':memory:');
+  db.exec("CREATE TABLE orders(id TEXT PRIMARY KEY); INSERT INTO orders VALUES('test');");
+  const migration = readFileSync(new URL('../server/migrations/0001_print_service.sql', import.meta.url), 'utf8');
+  db.exec(migration); db.exec(migration);
+  const insert = db.prepare("INSERT INTO print_jobs(id,order_id,created_at,updated_at) VALUES(?,'test',0,0) ON CONFLICT(order_id) DO NOTHING");
+  insert.run('first'); insert.run('second');
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM print_jobs').get().count, 1);
+  db.close();
 });

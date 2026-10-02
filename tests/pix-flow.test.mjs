@@ -31,12 +31,19 @@ class D1 {
     };
     return query;
   }
-  async batch(queries) { return Promise.all(queries.map(query => query.run())); }
+  async batch(queries) {
+    this.db.exec('BEGIN');
+    try {
+      const results = [];
+      for (const query of queries) results.push(await query.run());
+      this.db.exec('COMMIT'); return results;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
 }
 
 function fixture({ loseClientResponse = false, loseProviderResponse = false, collector = 123 } = {}) {
   const env = {
-    DB: new D1(), PIX_ENABLED: 'true', MP_ACCESS_TOKEN: 'test-only-token',
+    DB: new D1(), PIX_ENABLED: 'true', PRINT_SERVICE_ENABLED: 'true', MP_ACCESS_TOKEN: 'test-only-token',
     MP_WEBHOOK_SECRET: 'test-only-webhook', RATE_LIMIT_SECRET: 'test-only-rate-limit',
     MP_COLLECTOR_ID: '123', PUBLIC_API_URL: api, ALLOWED_ORIGINS: origin,
   };
@@ -116,7 +123,9 @@ test('client, Worker and real provider agree on totals, QR, signed approval and 
   assert.equal((await f.webhook(false)).status, 401);
   assert.equal((await f.client.refresh()).order.status, 'pending');
   assert.equal((await f.webhook()).status, 200);
+  assert.equal((await f.webhook()).status, 200); // Duplicate approval.
   const approved = (await f.client.refresh()).order;
+  assert.equal(f.env.DB.db.prepare('SELECT COUNT(*) AS count FROM print_jobs WHERE order_id=?').get(approved.id).count, 1);
   assert.equal(approved.status, 'approved');
   assert.equal(approved.qrCode, undefined);
   const products = Object.fromEntries(approved.items.map(item => [item.id, { name: item.name, price: item.priceCents, allowsNotes: true }]));

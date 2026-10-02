@@ -167,3 +167,36 @@ test('estorno pode progredir a contestação sem recuperar aprovação', async (
   await assert.rejects(client.refresh());
   assert.equal(client.getSession().order.status, 'charged_back');
 });
+
+test('approved WhatsApp click works with unavailable printing and exposes explicit new order', async () => {
+  const fs = require('node:fs'); const vm = require('node:vm');
+  const script = fs.readFileSync(require.resolve('../cardapio.js'), 'utf8');
+  const handlers = new Map(); const buttons = new Map();
+  for (const id of ['#pix-whatsapp', '#pix-new-order']) buttons.set(id, { hidden: true, addEventListener: (_event, handler) => handlers.set(id, handler) });
+  const client = createClient(config, { fetchImpl: async () => response(payment({ status: 'approved' })) });
+  await client.start(cart, details);
+  const session = client.getSession(); const messages = []; let printCalls = 0; let closed = false; let saves = 0; let renders = 0;
+  const context = vm.createContext({
+    document: { querySelector: id => buttons.get(id) }, pix: client, pixBusy: false,
+    products: { 'item-1': { price: 1, allowsNotes: true } }, order: orderRules,
+    printer: { beginPix() { printCalls++; throw Error('printing disabled'); }, async confirmApproved() { printCalls++; throw Error('CORS / print service offline'); } },
+    openWhatsapp: message => { assert.equal(client.getSession(), session); messages.push(message); },
+    cart: [...cart], save: () => saves++, render: () => renders++, dialog: { close: () => { closed = true; } },
+  });
+  // Execute the actual registered production handlers, with a printer that would fail.
+  for (const id of ['#pix-whatsapp', '#pix-new-order']) {
+    const start = script.indexOf(`  document.querySelector("${id}").addEventListener`);
+    const end = script.indexOf('\n  });', start) + '\n  });'.length;
+    assert.ok(start >= 0); vm.runInContext(script.slice(start, end), context);
+  }
+  await handlers.get('#pix-whatsapp')();
+  assert.equal(messages.length, 1); assert.match(messages[0], /33,00/);
+  assert.equal(printCalls, 0); assert.equal(buttons.get('#pix-new-order').hidden, false);
+  assert.equal(client.getSession(), session); assert.equal(client.getSession().order.status, 'approved');
+  assert.equal(context.cart.length, 1);
+  handlers.get('#pix-new-order')();
+  assert.equal(client.getSession(), null); assert.equal(context.cart.length, 0);
+  assert.equal(saves, 1); assert.equal(renders, 1); assert.equal(closed, true);
+  assert.equal(buttons.get('#pix-new-order').hidden, true);
+  await handlers.get('#pix-whatsapp')(); assert.equal(messages.length, 1);
+});

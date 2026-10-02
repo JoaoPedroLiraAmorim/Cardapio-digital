@@ -100,10 +100,14 @@ function printOrder(row) {
     totalCents: row.amount_cents, payment: payload.payment, changeForCents: payload.changeForCents,
     ...(row.status === 'approved' ? {paymentStatus: 'Pix aprovado'} : {})};
 }
+function printJobQuery(env, orderId, now, approvedOnly = false) {
+  return query(env, `INSERT INTO print_jobs(id,order_id,status,available_at,created_at,updated_at)
+    SELECT ?,id,'queued',?,?,? FROM orders WHERE id=?${approvedOnly ? " AND status='approved'" : ''}
+    ON CONFLICT(order_id) DO NOTHING`, crypto.randomUUID(), now, now, now, orderId);
+}
 async function enqueuePrint(env, orderId, now) {
   if (env.PRINT_SERVICE_ENABLED !== 'true') return;
-  await query(env, `INSERT INTO print_jobs(id,order_id,status,available_at,created_at,updated_at)
-    VALUES(?,?,'queued',?,?,?) ON CONFLICT(order_id) DO NOTHING`, crypto.randomUUID(), orderId, now, now, now).run();
+  await printJobQuery(env, orderId, now).run();
 }
 async function handlePrintRoute(request, env, url, headers, now) {
   if (env.PRINT_SERVICE_ENABLED !== 'true' || !env.DB) fail(503, 'Impressão HML indisponível.');
@@ -202,7 +206,7 @@ async function applyPayment(env, row, payment, now) {
   if (!['creating', 'pending', 'approved', 'rejected', 'cancelled', 'refunded', 'charged_back'].includes(payment.status)) fail(502, 'Estado de pagamento desconhecido.');
   const status = payment.status === 'pending' && payment.expiresAt && Date.parse(payment.expiresAt) <= now ? 'expired' : payment.status;
   // Expiration never regresses to pending; verified late approvals and reversals still advance.
-  await query(env, `UPDATE orders SET payment_id=?, status=CASE WHEN status='expired' AND ?='pending' THEN 'expired' ELSE ? END,
+  const update = query(env, `UPDATE orders SET payment_id=?, status=CASE WHEN status='expired' AND ?='pending' THEN 'expired' ELSE ? END,
     qr_code=COALESCE(?,qr_code), qr_code_base64=COALESCE(?,qr_code_base64), expires_at=?, lease_until=0, updated_at=?
     WHERE id=? AND (payment_id IS NULL OR payment_id=?)
     AND (status IN ('creating','pending','expired') OR status=?
@@ -210,7 +214,11 @@ async function applyPayment(env, row, payment, now) {
       OR (status='approved' AND ? IN ('refunded','charged_back'))
       OR (status='refunded' AND ?='charged_back'))`,
     String(payment.id), status, status, payment.qrCode || null, payment.qrCodeBase64 || null, payment.expiresAt || row.expires_at, now,
-    row.id, String(payment.id), status, status, status, status).run();
+    row.id, String(payment.id), status, status, status, status);
+  // D1 batch is transactional: never persist an approval without its enabled print job.
+  // The INSERT checks the persisted state and UNIQUE(order_id) makes every retry safe.
+  if (status === 'approved' && env.PRINT_SERVICE_ENABLED === 'true') await env.DB.batch([update, printJobQuery(env, row.id, now, true)]);
+  else await update.run();
   const updated = await query(env, 'SELECT * FROM orders WHERE id=?', row.id).first();
   return updated;
 }
