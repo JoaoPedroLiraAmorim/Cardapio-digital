@@ -65,7 +65,7 @@ test('HTML e raiz exigem revalidação de cache', () => {
 test('títulos sobre verde atingem contraste mínimo e logo é mais leve', () => {
   const css = fs.readFileSync(path.join(root,'cardapio.css'),'utf8');
   const bg = css.match(/--bg-main:\s*#([0-9a-f]{6})/i)[1];
-  const title = css.match(/--title-on-main:\s*#([0-9a-f]{6})/i)[1];
+  const title = css.match(/--title-on-green:\s*#([0-9a-f]{6})/i)[1];
   const luminance = color => color.match(/../g).map(value => parseInt(value,16)/255).map(value => value <= .04045 ? value/12.92 : ((value+.055)/1.055)**2.4).reduce((sum,value,index) => sum+value*[.2126,.7152,.0722][index],0);
   const values = [luminance(bg),luminance(title)];
   assert.ok((Math.max(...values)+.05)/(Math.min(...values)+.05) >= 3);

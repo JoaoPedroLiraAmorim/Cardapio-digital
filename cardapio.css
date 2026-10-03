@@ -5,11 +5,11 @@
 
 /* --- 1. Paleta Oficial & Variáveis --- */
 :root {
-  --bg-main: #521016;         /* Fundo principal: vinho da marca */
+  --bg-main: #416B6A;         /* Fundo principal: Azul-petróleo vintage da logo */
   --bg-surface: #FFFDF8;      /* Superfície: Branco creme (cards e barra) */
   --primary: #521016;         /* Vinho principal da marca */
   --primary-dark: #521016;    /* Vinho escuro (footer, contraste) */
-  --title-on-main: #FFFDF8;   /* Títulos com contraste sobre o vinho */
+  --title-on-green: #30070B;  /* Vinho com contraste para títulos sobre o verde */
   --accent: #D99A2B;          /* Dourado mostarda (preços) */
   --secondary: #3F6B69;       /* Verde-petróleo */
   --text-main: #241814;       /* Marrom escuro (textos dentro dos cards) */
@@ -38,7 +38,6 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  background-color: var(--primary-dark);
 }
 
 body {
@@ -183,7 +182,7 @@ a {
 .intro-headline {
   font-family: var(--font-display);
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--title-on-main);
+  color: var(--title-on-green);
   line-height: 1.15;
   margin-bottom: 0.35rem;
 }
@@ -216,7 +215,7 @@ a {
 .section-title {
   font-family: var(--font-display);
   font-size: clamp(1.85rem, 4vw, 2.3rem);
-  color: var(--title-on-main);
+  color: var(--title-on-green);
   line-height: 1.15;
 }
 
