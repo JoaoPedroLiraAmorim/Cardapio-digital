@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { webcrypto } = require('node:crypto');
 const order = require('./pedido.js');
 const html = fs.readFileSync(__dirname + '/cardapio.html', 'utf8');
 const products = Object.create(null);
@@ -10,10 +11,15 @@ for (const match of html.matchAll(/<article data-product-id="([^"]+)" data-price
 }
 const cart = [{ id: 'item-1', quantity: 2, notes: 'Um sem cebola' }, { id: 'item-8', quantity: 1, notes: '' }];
 test('catálogo completo e preços consistentes com o cardápio', () => assert.equal(Object.keys(products).length, 12));
-test('total em centavos, entrega de R$ 3 e retirada grátis', () => {
-  assert.deepEqual(order.totals(cart, products, 'delivery'), { subtotal: 5898, delivery: 300, total: 6198 });
+test('total em centavos, entrega por bairro e retirada grátis', () => {
+  assert.deepEqual(order.totals(cart, products, 'delivery', 'Jardim São José'), { subtotal: 5898, delivery: 300, total: 6198 });
+  assert.deepEqual(order.totals(cart, products, 'delivery', 'Centro'), { subtotal: 5898, delivery: 800, total: 6698 });
   assert.deepEqual(order.totals(cart, products, 'pickup'), { subtotal: 5898, delivery: 0, total: 5898 });
   assert.deepEqual(order.totals([], products, 'delivery'), { subtotal: 0, delivery: 0, total: 0 });
+});
+test('bairro aceita acentos e identifica bairros desconhecidos', () => {
+  assert.equal(order.deliveryFeeFor('  jardim são josé '), 300);
+  assert.equal(order.deliveryFeeFor('Bairro inexistente'), 0);
 });
 test('restaura apenas itens válidos sem confiar em preços salvos', () => {
   assert.deepEqual(order.restore([{ id: 'item-8', quantity: 1, notes: 'Observação antiga da bebida' }], products), [{ id: 'item-8', quantity: 1, notes: '' }]);
@@ -39,15 +45,21 @@ Observação do pedido: Tocar campainha
 
 🧾 Resumo
 Subtotal: ${order.money(5898)}
-Entrega: ${order.money(300)}
-Total: ${order.money(6198)}
+Entrega: ${order.money(800)}
+Total: ${order.money(6698)}
 
 💳 Pagamento: Dinheiro, na entrega.
 Troco para: ${order.money(10000)}
 
 🍔 Fico no aguardo da confirmação e do preparo. Obrigado!`);
   assert.equal(order.config.whatsapp, '5512981440776');
-  assert.equal(new URL(`https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(message)}`).searchParams.get('text'), message);
+  assert.equal(order.deliveryFeeFor('Centro'), 800);
+  assert.deepEqual(order.config.pix, { enabled: true, apiBaseUrl: 'https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev' });
+  assert.deepEqual(order.config.print, { enabled: true, apiBaseUrl: 'https://jg-cardapio-api-hml.jg-hamburgueria-cardapio.workers.dev' });
+  const url = new URL(`https://api.whatsapp.com/send?phone=${order.config.whatsapp}&text=${encodeURIComponent(message)}`);
+  assert.equal(url.searchParams.get('phone'), order.config.whatsapp);
+  assert.equal(url.searchParams.get('text'), message);
+  assert.match(url.search, /%F0%9F%91%8B/);
 });
 test('retirada com pagamento no local segue o modelo', () => {
   for (const [payment, label] of Object.entries({ pix: 'Pix', debit: 'Cartão de débito', credit: 'Cartão de crédito', cash: 'Dinheiro' })) {
@@ -70,4 +82,19 @@ test('Pix confirmado usa os modelos de retirada e entrega sem expor ID do pedido
     assert.ok(!message.includes('order-secreto'));
     assert.ok(!message.includes('Mercado Pago'));
   }
+});
+test('confirmação de impressão reutiliza credenciais após reload sem armazenar PII', async () => {
+  const values = new Map(); const storage = { getItem:key => values.get(key) || null, setItem:(key,value) => values.set(key,value) };
+  const requests = [];
+  const fetchImpl = async (_url, init) => { requests.push(init); return Response.json({id:'pedido-1',queued:true},{status:201}); };
+  const details = {customer:'Cliente secreto',fulfillment:'pickup',payment:'debit',notes:'Observação privada'};
+  const options = {fetchImpl,cryptoImpl:webcrypto,storageImpl:storage};
+  const printConfig = { enabled:true, apiBaseUrl:'https://print.example' };
+  await order.createPrintClient(printConfig,options).confirm(cart,details);
+  await order.createPrintClient(printConfig,options).confirm(cart,details);
+  assert.equal(requests.length,2);
+  assert.equal(requests[0].headers.Authorization,requests[1].headers.Authorization);
+  assert.equal(requests[0].headers['Idempotency-Key'],requests[1].headers['Idempotency-Key']);
+  const persisted=[...values.values()].join('');
+  assert.ok(!persisted.includes('Cliente secreto')); assert.ok(!persisted.includes('Observação privada'));
 });

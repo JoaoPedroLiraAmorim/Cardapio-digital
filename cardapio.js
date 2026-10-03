@@ -145,6 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const dock = document.querySelector(".cart-dock");
   const status = document.querySelector("#cart-status");
   const pix = window.JGPix.createClient(order.config.pix);
+  const printer = order.createPrintClient(order.config.print);
   const pixPanel = document.querySelector("#pix-panel");
   const pixState = document.querySelector("#pix-state");
   const pixRefresh = document.querySelector("#pix-refresh");
@@ -153,6 +154,16 @@ document.addEventListener("DOMContentLoaded", () => {
   let pixBusy = false;
   let toastTimeout;
   let cart = [];
+  const neighborhoodInput = form.elements.neighborhood;
+  const neighborhoodHint = document.querySelector("#neighborhood-hint");
+  const neighborhoodOptions = document.querySelector("#neighborhood-options");
+
+  Object.entries(order.deliveryNeighborhoods).forEach(([fee, names]) => names.forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.label = `${name} — ${order.money(Number(fee))}`;
+    neighborhoodOptions.append(option);
+  }));
 
   document.querySelectorAll("[data-product-id]").forEach(card => {
     const id = card.dataset.productId;
@@ -187,15 +198,24 @@ document.addEventListener("DOMContentLoaded", () => {
     toastTimeout = setTimeout(() => status.classList.remove("visible"), 2600);
   }
   function updateTotals() {
-    const amounts = order.totals(cart, products, form.elements.fulfillment.value);
+    const delivery = form.elements.fulfillment.value === "delivery";
+    const amounts = order.totals(cart, products, form.elements.fulfillment.value, neighborhoodInput.value);
     document.querySelector("#cart-count").textContent = `· ${cart.reduce((sum, item) => sum + item.quantity, 0)} itens`;
     document.querySelector("#cart-dock-total").textContent = order.money(amounts.subtotal);
     document.querySelector("#subtotal").textContent = order.money(amounts.subtotal);
-    document.querySelector("#delivery-fee").textContent = amounts.delivery ? order.money(amounts.delivery) : "Grátis";
+    document.querySelector("#delivery-fee").textContent = delivery && !amounts.delivery ? "Selecione o bairro" : amounts.delivery ? order.money(amounts.delivery) : "Grátis";
     document.querySelector("#delivery-label").textContent = form.elements.fulfillment.value === "pickup" ? "Retirada" : "Entrega";
     document.querySelector("#order-total").textContent = order.money(amounts.total);
     form.elements.changeFor.min = (amounts.total / 100).toFixed(2);
     form.elements.changeFor.setCustomValidity("");
+  }
+  function updateNeighborhoodValidity() {
+    const delivery = form.elements.fulfillment.value === "delivery";
+    const fee = order.deliveryFeeFor(neighborhoodInput.value);
+    neighborhoodInput.setCustomValidity(delivery && !fee ? "Selecione um bairro da lista para calcular a taxa de entrega." : "");
+    neighborhoodHint.textContent = delivery
+      ? fee ? `Taxa de entrega: ${order.money(fee)}.` : "Selecione um bairro para calcular a taxa de entrega."
+      : "O endereço não é necessário para retirada.";
   }
   function render() {
     dock.hidden = !cart.length;
@@ -277,8 +297,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector("#pix-email-field").hidden = !onlinePix;
     form.elements.payerEmail.disabled = !onlinePix;
     form.elements.payerEmail.required = onlinePix;
-    document.querySelector("#checkout-submit").textContent = onlinePix ? "Gerar Pix para pagar" : "Continuar no WhatsApp ↗";
-    document.querySelector("#payment-hint").textContent = onlinePix ? "Você paga pelo aplicativo do seu banco. Confirmamos o Pix antes de enviar o pedido no WhatsApp." : "Você não paga aqui. O pedido e o pagamento serão confirmados pela hamburgueria no WhatsApp.";
+    document.querySelector("#checkout-submit").textContent = onlinePix ? "Gerar Pix para pagar" : "Confirmar pedido e abrir WhatsApp ↗";
+    document.querySelector("#payment-hint").textContent = onlinePix ? "Você paga pelo aplicativo do seu banco. Após aprovação, confirme para enviar a comanda e abrir o WhatsApp." : "Confirme para enviar a comanda à hamburgueria e depois abra o WhatsApp.";
+    updateNeighborhoodValidity();
     updateTotals();
   }
   function syncPixLock() {
@@ -366,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   function openWhatsapp(message) {
     const link = document.createElement("a");
-    link.href = `https://wa.me/${order.config.whatsapp}?text=${encodeURIComponent(message)}`;
+    link.href = `https://api.whatsapp.com/send?phone=${order.config.whatsapp}&text=${encodeURIComponent(message)}`;
     link.target = "_blank"; link.rel = "noopener noreferrer";
     document.body.append(link); link.click(); link.remove();
     announce("Envie a mensagem no WhatsApp para solicitar seu pedido.");
@@ -386,29 +407,34 @@ document.addEventListener("DOMContentLoaded", () => {
   dialog.addEventListener("close", () => { document.body.classList.remove("cart-open"); stopPixPolling(); pix.pause(); });
   form.addEventListener("change", updateFields);
   form.elements.changeFor.addEventListener("input", () => form.elements.changeFor.setCustomValidity(""));
-  form.addEventListener("submit", event => {
+  form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!cart.length) return;
     for (const name of ["customer", "address", "neighborhood"]) {
       const input = form.elements[name];
       input.setCustomValidity(input.required && !input.value.trim() ? "Preencha este campo." : "");
     }
+    updateNeighborhoodValidity();
     const details = Object.fromEntries(new FormData(form));
     details.needsChange = details.payment === "cash" && form.elements.needsChange.checked;
     details.changeFor = Math.round(Number(details.changeFor) * 100);
-    if (details.needsChange && details.changeFor < order.totals(cart, products, details.fulfillment).total) {
+    if (details.needsChange && details.changeFor < order.totals(cart, products, details.fulfillment, details.neighborhood).total) {
       form.elements.changeFor.setCustomValidity("Informe um valor igual ou maior que o total do pedido.");
     }
     if (!form.reportValidity()) return;
     if (pix.getSession()) return;
     if (pix.enabled && details.payment === "pix") {
-      if (order.totals(cart, products, details.fulfillment).total > 150000) return announce("O Pix aceita pedidos de até R$ 1.500,00. Ajuste o carrinho.");
+      if (order.totals(cart, products, details.fulfillment, details.neighborhood).total > 150000) return announce("O Pix aceita pedidos de até R$ 1.500,00. Ajuste o carrinho.");
       pixAttempts = 0; runPix(false, details); return;
     }
-    openWhatsapp(order.message(cart, products, details));
+    const submit = document.querySelector("#checkout-submit"); submit.disabled = true;
+    try { await printer.confirm(cart, details); openWhatsapp(order.message(cart, products, details)); }
+    catch (error) { announce(error.message); }
+    finally { submit.disabled = false; }
   });
   form.addEventListener("input", event => {
     if (["customer", "address", "neighborhood"].includes(event.target.name)) event.target.setCustomValidity("");
+    if (event.target.name === "neighborhood") { updateNeighborhoodValidity(); updateTotals(); }
   });
   render(); updateFields();
 });

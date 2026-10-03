@@ -16,9 +16,9 @@
   <link rel="stylesheet" href="cardapio.css">
 
   <!-- Scripts -->
-  <script src="pedido.js" defer></script>
+  <script src="pedido.js?v=20261003-delivery-fees" defer></script>
   <script src="pix.js" defer></script>
-  <script src="cardapio.js" defer></script>
+  <script src="cardapio.js?v=20261003-delivery-fees" defer></script>
 </head>
 <body>
 
@@ -259,12 +259,12 @@
       <div id="cart-items"></div>
       <form id="checkout-form" hidden>
         <fieldset><legend>Como você quer receber?</legend>
-          <div class="choice-row"><label><input type="radio" name="fulfillment" value="delivery" checked> Entrega · R$ 3,00</label><label><input type="radio" name="fulfillment" value="pickup"> Retirada · grátis</label></div>
+          <div class="choice-row"><label><input type="radio" name="fulfillment" value="delivery" checked> Entrega</label><label><input type="radio" name="fulfillment" value="pickup"> Retirada · grátis</label></div>
         </fieldset>
         <label class="field">Seu nome<input name="customer" autocomplete="name" required maxlength="80" placeholder="Como podemos te chamar?"></label>
         <div id="address-fields">
           <label class="field">Rua e número<input name="address" autocomplete="street-address" required maxlength="180" placeholder="Ex.: Rua das Flores, 123"></label>
-          <label class="field">Bairro<input name="neighborhood" autocomplete="address-level3" required maxlength="80" placeholder="Seu bairro"></label>
+          <label class="field">Bairro<input name="neighborhood" list="neighborhood-options" autocomplete="address-level3" required maxlength="80" placeholder="Digite ou selecione seu bairro"><datalist id="neighborhood-options"></datalist><span id="neighborhood-hint">Selecione um bairro para calcular a taxa de entrega.</span></label>
           <label class="field">Complemento ou referência <span>(opcional)</span><input name="reference" maxlength="180" placeholder="Apartamento, ponto de referência…"></label>
         </div>
         <label class="field">Forma de pagamento<select name="payment" required><option value="" disabled selected>Selecione uma opção</option><option value="pix">Pix</option><option value="debit">Cartão de débito</option><option value="credit">Cartão de crédito</option><option value="cash">Dinheiro</option></select></label>
@@ -275,9 +275,9 @@
         </div>
         <label class="field">Observação do pedido <span>(opcional)</span><textarea name="notes" maxlength="500" rows="2" placeholder="Algo mais que precisamos saber?"></textarea></label>
         <div class="order-summary"><p><span>Subtotal</span><strong id="subtotal"></strong></p><p><span id="delivery-label">Entrega</span><strong id="delivery-fee"></strong></p><p class="summary-total"><span>Total</span><strong id="order-total"></strong></p></div>
-        <p class="checkout-hint" id="payment-hint">Você não paga aqui. O pedido e o pagamento serão confirmados pela hamburgueria no WhatsApp.</p>
-        <button type="submit" id="checkout-submit" class="primary-button whatsapp-button">Continuar no WhatsApp <span aria-hidden="true">↗</span></button>
-        <p class="checkout-hint">No WhatsApp, toque em <strong>Enviar</strong> para solicitar seu pedido.</p>
+        <p class="checkout-hint" id="payment-hint">Confirme para enviar a comanda à hamburgueria e depois abra o WhatsApp.</p>
+        <button type="submit" id="checkout-submit" class="primary-button whatsapp-button">Confirmar pedido e abrir WhatsApp <span aria-hidden="true">↗</span></button>
+        <p class="checkout-hint">A confirmação envia a comanda para preparo. No WhatsApp, toque em <strong>Enviar</strong> para solicitar seu pedido.</p>
       </form>
       <section id="pix-panel" hidden aria-labelledby="pix-title">
         <h3 id="pix-title" tabindex="-1">Pague com Pix</h3>
@@ -292,7 +292,7 @@
           <p id="pix-expiration" class="checkout-hint"></p>
         </div>
         <button type="button" id="pix-refresh" class="primary-button">Atualizar pagamento</button>
-        <button type="button" id="pix-whatsapp" class="primary-button whatsapp-button" hidden>Enviar pedido no WhatsApp ↗</button>
+        <button type="button" id="pix-whatsapp" class="primary-button whatsapp-button" hidden>Confirmar pedido e abrir WhatsApp ↗</button>
         <button type="button" id="pix-edit" class="pix-secondary" hidden>Voltar ao pedido</button>
         <button type="button" id="pix-new-order" class="pix-secondary" hidden>Iniciar outro pedido</button>
         <p class="checkout-hint">Após a confirmação, toque em enviar pedido e confirme o envio no WhatsApp. Aguarde a confirmação da hamburgueria.</p>
